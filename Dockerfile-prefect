@@ -1,0 +1,10 @@
+FROM python:3.12-windowsservercore-1809
+
+SHELL ["powershell", "-command"]
+
+WORKDIR /app
+
+COPY requirements/prefect.txt requirements/
+
+RUN python -m pip install --no-cache-dir --upgrade wheel pip
+RUN python -m pip install --no-cache-dir -r requirements/prefect.txt
