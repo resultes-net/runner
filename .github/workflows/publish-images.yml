@@ -1,0 +1,50 @@
+name: Create and publish Docker images
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push-images:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - dockerfile: Dockerfile-prefect
+            name: resultes-runner-prefect
+          - dockerfile: ./docker/producer/Dockerfile
+            name: resultes-runner-producer
+          - dockerfile: ./docker/queue/Dockerfile
+            image: resultes-runner-queue
+          - dockerfile: ./docker/worker/Dockerfile
+            image: resultes-runner-worker
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          file: ${{ matrix.dockerfile }}
+          tags: spf-ost/${{ matrix.name }}:latest
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/spf-ost/${{ matrix.name }}:latest
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      
