@@ -26,9 +26,9 @@ jobs:
 
       - name: Build and push Docker image
         # See https://stackoverflow.com/questions/47074457/how-to-specify-docker-build-network-host-mode-in-docker-compose-at-the-time
-        # for details on --network=host
+        # for details on --network=nat
         run: |
-          docker build -f Dockerfile-prefect -t spf-ost/resultes-runner-prefect:latest --network=host .
+          docker build -f Dockerfile-prefect -t spf-ost/resultes-runner-prefect:latest --network=nat .
           docker push spf-ost/resultes-runner-prefect:latest
 
       - name: Generate artifact attestation
@@ -68,9 +68,9 @@ jobs:
 
       - name: Build and push Docker image
         # See https://stackoverflow.com/questions/47074457/how-to-specify-docker-build-network-host-mode-in-docker-compose-at-the-time
-        # for details on --network=host
+        # for details on --network=nat
         run: |
-          docker build -f $ {{ matrix.dockerfile }} -t spf-ost/${{ matrix.name }}:latest --network=host .
+          docker build -f $ {{ matrix.dockerfile }} -t spf-ost/${{ matrix.name }}:latest --network=nat .
           docker push spf-ost/${{ matrix.name }}:latest
 
       - name: Generate artifact attestation
