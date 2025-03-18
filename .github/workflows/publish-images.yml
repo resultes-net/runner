@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-push-base-docker-image:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     permissions:
       contents: read
       packages: write
@@ -28,14 +28,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
           
       - name: Build and push Docker image
-        id: push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platform: windows/amd64
-          file: Dockerfile-prefect
-          tags: spf-ost/resultes-runner-prefect:latest
+        run: |
+          docker build -f Docker-prefect -t spf-ost/resultes-runner-prefect:latest
+          docker push spf-ost/resultes-runner-prefect:latest
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
@@ -45,7 +40,7 @@ jobs:
           push-to-registry: true
           
   build-and-push-images:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     needs: build-and-push-base-docker-image
     strategy:
       matrix:
@@ -76,14 +71,9 @@ jobs:
         uses: docker/setup-buildx-action@v3
           
       - name: Build and push Docker image
-        id: push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platform: windows/amd64
-          file: ${{ matrix.dockerfile }}
-          tags: spf-ost/${{ matrix.name }}:latest
+        run: |
+          docker build -f $ {{ matrix.dockerfile }} -t spf-ost/${{ matrix.name }}:latest .
+          docker push spf-ost/${{ matrix.name }}:latest
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
