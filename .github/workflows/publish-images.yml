@@ -26,6 +26,7 @@ jobs:
         
         # See here: https://stackoverflow.com/questions/73854338/cant-install-pip-packages-when-building-a-windows-docker-container
       - name: Fix DNS server for Docker
+        shell: cmd
         run: sc config docker binpath="\"C:\Program Files\docker\dockerd.exe\" --run-service --dns 8.8.8.8"
 
       - name: Build and push Docker image
@@ -70,6 +71,7 @@ jobs:
           
       # See here: https://stackoverflow.com/questions/73854338/cant-install-pip-packages-when-building-a-windows-docker-container
       - name: Fix DNS server for Docker
+        shell: cmd
         run: sc config docker binpath="\"C:\Program Files\docker\dockerd.exe\" --run-service --dns 8.8.8.8"
 
       - name: Build and push Docker image
