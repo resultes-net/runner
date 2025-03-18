@@ -3,7 +3,7 @@ name: Create and publish Docker images
 on:
   push:
     branches:
-      - main
+      - *
 
 jobs:
   build-and-push-base-docker-image:
@@ -23,16 +23,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-        
-      - run: nslookup pypi.org
-        
+                
         # See here: https://stackoverflow.com/questions/73854338/cant-install-pip-packages-when-building-a-windows-docker-container
       - name: Fix DNS server for Docker
         shell: cmd
         run: sc config docker binpath="\"C:\Program Files\docker\dockerd.exe\" --run-service --dns 8.8.8.8"
-        
-      - run: nslookup pypi.org                   
-      
+              
       - name: Build and push Docker image
         run: |
           docker build -f Dockerfile-prefect -t spf-ost/resultes-runner-prefect:latest .
