@@ -26,7 +26,7 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -f Docker-prefect -t spf-ost/resultes-runner-prefect:latest
+          docker build -f Dockerfile-prefect -t spf-ost/resultes-runner-prefect:latest .
           docker push spf-ost/resultes-runner-prefect:latest
 
       - name: Generate artifact attestation
