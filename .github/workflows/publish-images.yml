@@ -33,13 +33,6 @@ jobs:
         run: |
           $image_digest=$(py -3.12 push_docker_image_and_get_digest.py ghcr.io/spf-ost/resultes-runner-prefect:latest)
           echo "image_digest=${image_digest}" >> $env:GITHUB_OUTPUT
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ghcr.io/spf-ost/resultes-runner-prefect:latest
-          subject-digest: ${{ steps.push.outputs.image_digest }}
-          push-to-registry: true
   
   build-and-push-images:
     runs-on: windows-2019
@@ -78,11 +71,3 @@ jobs:
         run: |
           $image_digest=$(py -3.12 push_docker_image_and_get_digest.py ghcr.io/spf-ost/${{ matrix.name }}:latest)
           echo "image_digest=${image_digest}" >> $env:GITHUB_OUTPUT
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ghcr.io/spf-ost/${{ matrix.name }}:latest
-          subject-digest: ${{ steps.push.outputs.image_digest }}
-          push-to-registry: true
-      
