@@ -43,9 +43,9 @@ jobs:
           - dockerfile: ./docker/producer/Dockerfile
             name: resultes-runner-producer
           - dockerfile: ./docker/queue/Dockerfile
-            image: resultes-runner-queue
+            name: resultes-runner-queue
           - dockerfile: ./docker/worker/Dockerfile
-            image: resultes-runner-worker
+            name: resultes-runner-worker
     permissions:
       contents: read
       packages: write
