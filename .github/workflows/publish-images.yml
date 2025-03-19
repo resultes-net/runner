@@ -23,24 +23,29 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-                
+        
         # See here: https://stackoverflow.com/questions/73854338/cant-install-pip-packages-when-building-a-windows-docker-container
       - name: Fix DNS server for Docker
         shell: cmd
         run: sc config docker binpath="\"C:\Program Files\docker\dockerd.exe\" --run-service --dns 8.8.8.8"
-              
-      - name: Build and push Docker image
+
+      - name: Build Docker image
         run: |
           docker build -f Dockerfile-prefect -t ghcr.io/spf-ost/resultes-runner-prefect:latest .
-          docker push ghcr.io/spf-ost/resultes-runner-prefect:latest
+
+      - name: Push Docker image
+        id: push
+        run: |
+          $image_digest=$(docker push ghcr.io/spf-ost/resultes-runner-prefect:latest)
+          echo "image_digest=${image_digest}" >> $env:GITHUB_OUTPUT
 
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/spf-ost/resultes-runner-prefect:latest
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.push.outputs.image_digest }}
           push-to-registry: true
-            
+  
   build-and-push-images:
     runs-on: windows-2019
     needs: build-and-push-base-docker-image
@@ -68,21 +73,26 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+      
       # See here: https://stackoverflow.com/questions/73854338/cant-install-pip-packages-when-building-a-windows-docker-container
       - name: Fix DNS server for Docker
         shell: cmd
         run: sc config docker binpath="\"C:\Program Files\docker\dockerd.exe\" --run-service --dns 8.8.8.8"
 
-      - name: Build and push Docker image
+      - name: Build Docker image
         run: |
           docker build -f $ {{ matrix.dockerfile }} -t ghcr.io/spf-ost/${{ matrix.name }}:latest .
-          docker push ghcr.io/spf-ost/${{ matrix.name }}:latest
 
+      - name: Push Docker image
+        id: push
+        run: |
+          $image_digest=$(docker push ghcr.io/spf-ost/${{ matrix.name }}:latest)
+          echo "image_digest=${image_digest}" >> $env:GITHUB_OUTPUT
+          
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/spf-ost/${{ matrix.name }}:latest
-          subject-digest: ${{ steps.push.outputs.digest }}
+          subject-digest: ${{ steps.push.outputs.image_digest }}
           push-to-registry: true
       
