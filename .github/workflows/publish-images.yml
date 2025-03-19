@@ -64,7 +64,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f $ {{ matrix.dockerfile }} -t ghcr.io/spf-ost/${{ matrix.name }}:latest .
+          docker build -f ${{ matrix.dockerfile }} -t ghcr.io/spf-ost/${{ matrix.name }}:latest .
 
       - name: Push Docker image
         id: push
