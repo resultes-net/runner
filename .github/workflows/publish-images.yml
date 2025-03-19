@@ -43,7 +43,7 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/spf-ost/resultes-runner-prefect:latest
-          subject-digest: ${{ steps.push.outputs.image_digest }}
+          subject-digest: sha256:${{ steps.push.outputs.image_digest }}
           push-to-registry: true
   
   build-and-push-images:
@@ -93,6 +93,6 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/spf-ost/${{ matrix.name }}:latest
-          subject-digest: ${{ steps.push.outputs.image_digest }}
+          subject-digest: sha256:${{ steps.push.outputs.image_digest }}
           push-to-registry: true
       
