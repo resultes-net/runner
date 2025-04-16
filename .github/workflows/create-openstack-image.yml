@@ -1,0 +1,17 @@
+name: Publish openstack image
+
+on:
+  push:
+    branches:
+      - '*'
+
+jobs:
+  build-and-push-base-docker-image:
+    runs-on: ga-runners-set
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Say hello
+        run: |
+          echo "Hello, world!"
