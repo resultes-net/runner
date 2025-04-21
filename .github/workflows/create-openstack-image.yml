@@ -26,7 +26,7 @@ jobs:
       - name: Install dependencies
         run: |
           venv/bin/python -m pip install --upgrade wheel pip uv
-          venv/bin/python -m uv pip install -r requirements/build.txt
+          venv/bin/python -m uv pip install -r requirements-linux/build.txt
 
       - name: List OpenStack projects
         run: ./scripts/os project list
