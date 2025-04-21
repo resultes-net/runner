@@ -4,4 +4,4 @@
 
 . config/PCU-4GXOPDF-openrc.txt
 
-OS_AUTH_TOKEN= $VENV/bin/openstack "$*"
+OS_AUTH_TOKEN= $VENV/bin/openstack "$@"
