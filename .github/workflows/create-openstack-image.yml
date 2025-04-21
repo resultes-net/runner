@@ -119,7 +119,7 @@ jobs:
 
       - name: Install Python on server
         run: |
-          ./scripts/ssh 'Start-Process -Wait .\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet'
+          ./scripts/ssh 'Start-Process .\resultes\python-3.13.3-amd64.exe -Wait -ArgumentList /quiet'
           
       - name: Enable long paths on server
         run: |
