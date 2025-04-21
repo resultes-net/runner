@@ -19,9 +19,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        
+      - name: Make scripts executable
+        run: |
+          chmod +x ./scripts/os ./scripts/ssh ./scripts/scp
 
       - name: Create virtual environment
-        run: python3.12 -m venv venv
+        run: |
+          python3.12 -m venv venv
 
       - name: Install dependencies
         run: |
@@ -29,13 +34,16 @@ jobs:
           venv/bin/python -m uv pip install -r requirements-linux/build.txt
 
       - name: List OpenStack projects
-        run: ./scripts/os project list
+        run: |
+          ./scripts/os project list
 
       - name: Create private key file
-        run: echo "$BUILD_KEYPAIR_PRIVATE_KEY" > config/build_keypair
+        run: |
+          echo "$BUILD_KEYPAIR_PRIVATE_KEY" > config/build_keypair
 
       - name: Create key pair
-        run: ./scripts/os keypair create --public-key config/build_keypair.pub build_keypair
+        run: |
+          ./scripts/os keypair create --public-key config/build_keypair.pub build_keypair
 
       - name: Spin up machine
         run: |
