@@ -1,0 +1,9 @@
+export OS_AUTH_URL=https://api.pub1.infomaniak.cloud/identity/v3
+export OS_PROJECT_NAME=PCP-4GXOPDF
+export OS_PROJECT_DOMAIN_NAME=default
+export OS_USERNAME=PCU-4GXOPDF
+export OS_USER_DOMAIN_NAME=default
+export OS_PROJECT_ID=8915080f010e41ac9bd66174ee1c1d78
+export OS_IDENTITY_API_VERSION=3
+export OS_INTERFACE=public
+export OS_REGION_NAME=dc3-a

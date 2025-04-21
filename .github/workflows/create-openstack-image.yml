@@ -1,17 +1,180 @@
-name: Publish openstack image
+name: Build runner image
 
 on:
   push:
     branches:
-      - '*'
+      - main
 
 jobs:
-  build-and-push-base-docker-image:
-    runs-on: ga-runners-set
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+  build:
+    runs-on: [ ubuntu-24.04 ]
+    
+    defaults: 
+      run:
+        working-directory: create-openstack-image
 
-      - name: Say hello
+    env:
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+      BUILD_KEYPAIR_PRIVATE_KEY: ${{ secrets.BUILD_KEYPAIR_PRIVATE_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create virtual environment
+        run: python3.12 -m venv venv
+
+      - name: Install dependencies
         run: |
-          echo "Hello, world!"
+          venv/bin/python -m pip install --upgrade wheel pip uv
+          venv/bin/python -m uv pip install -r requirements/build.txt
+
+      - name: List OpenStack projects
+        run: ./scripts/os project list
+
+      - name: Create private key file
+        run: echo "$BUILD_KEYPAIR_PRIVATE_KEY" > config/build_keypair
+
+      - name: Create key pair
+        run: ./scripts/os keypair create --public-key config/build_keypair.pub build_keypair
+
+      - name: Spin up machine
+        run: |
+          ./scripts/os server create --image "Windows Server 2025 Datacenter SSH" --flavor "a8-ram16-disk50-perf1" \
+            --key-name build_keypair --network ext-net1 build-image-server
+
+      - name: Get IP address
+        run: |
+          set +e
+          ip_address=""
+          for i in $(seq 1 10)
+          do
+            ip_address=$(./scripts/os server show build-image-server -fjson -caddresses | jq -r '.addresses."ext-net1"|.[0]')
+            if [ $? -eq 0 ] && [ "$ip_address" != "null" ]
+            then
+              break
+            fi
+            sleep 5
+          done
+          set -e
+                    
+          if [ -z ip_address ] || [ "$ip_address" = "null" ]
+          then
+            false
+          else
+            export BUILD_IMAGE_SERVER_IP="$ip_address" 
+            export SSH_LOCATION="Administrator@$ip_address"
+          
+            echo "IP address is $ip_address."
+            echo "BUILD_IMAGE_SERVER_IP=$BUILD_IMAGE_SERVER_IP" >> "$GITHUB_ENV"
+            echo "SSH_LOCATION=$SSH_LOCATION" >> "$GITHUB_ENV"
+          fi
+
+      - name: Set up ssh agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+            ssh-private-key: ${{ secrets.BUILD_IMAGE_SERVER_PRIVATE_SSH_KEY }}
+
+      - name: Wait till can connect via SSH
+        run: |
+          set +e
+          success="false"
+          for i in $(seq 1 10)
+          do
+            ssh -oStrictHostKeyChecking=no "$SSH_LOCATION" "echo Hello from \$env:ComputerName!" && success=true
+            if [ "$success" = "true" ]
+            then
+              break
+            fi
+            sleep 5
+          done
+          set -e
+          
+          if [ "$success" = "false" ]
+          then
+            false
+          else
+            echo "Connected successfully."
+          fi
+      
+      - name: Download Python
+        run: |
+          wget https://www.python.org/ftp/python/3.13.3/python-3.13.3-amd64.exe
+
+      - name: Create `resultes` folder
+        run: |
+          ./scripts/ssh mkdir results
+          
+      - name: Copy Python to server
+        run: |
+          ./scripts/scp python-3.13.3-amd64.exe resultes
+          
+      - name: Install Python on server
+        run: |
+          ./scripts/ssh 'Start-Process -Wait .\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet'
+          
+      - name: Enable long paths on server
+        run: |
+          ./scripts/ssh New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' \
+            -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+          
+      - name: Restart console so installation takes effect
+        run: |
+          ssh -o ControlPath=~/.ssh/master-build_image_server -O exit "$SSH_LOCATION"
+          
+      - name: Show Python version
+        run: |
+          ./scripts/ssh py -0
+        
+      - name: Copy `src` folder to server
+        run: |
+          ./scripts/scp -r ../requirements-3.13 ../src resultes
+
+      - name: Create venv on server
+        run: |
+          ./scripts/ssh 'py -3.13 -m venv resultes\venv3.13'
+          
+      - name: Install requirements on server
+        run: |
+          ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
+          ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m uv pip install -r resultes\requirements-3.13\requirements-3rd-party.txt'
+          
+      - name: Install service on server
+        run: |
+          ./scripts/ssh New-Service -Name '"ResulTES runner"' -BinaryPathName \
+            '"C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe C:\Users\Administrator\resultes\src\worker.py"' \
+            -StartupType Automatic
+
+      - name: Authenticate to swift
+        run: |
+          swift auth | awk '{print $2}' >> "$GITHUB_ENV"
+          
+      - name: Download TRNSYS onto server
+        run: |
+          ./scripts/ssh \
+            '$ProgressPreference="SilentlyContinue";' \
+              Invoke-WebRequest -Headers "@{\"X-Auth-Token\" = \"$OS_AUTH_TOKEN\"}" \
+                -Uri "${OS_STORAGE_URL}/resultes/build-runner-image/TRNSYS18_resultes.zip?version-id=1745269323.13082" \
+                -OutFile TRNSYS18_resultes.zip \
+            '; $ProgressPreference="Continue";'W
+          
+      - name: Unzip TRNSYS to C:\ on server
+        run: |
+          ./scripts/ssh Expand-Archive -Path 'resultes\TRNSYS18_resultes.zip' -DestinationPath 'C:\\'
+      
+      - name: Build image from server
+        run: |
+          ./scripts/os server image create build-image-server
+          
+          status=""
+          while [ -z "$status" || "$status" != "active" ]
+          do
+            status=$(./scripts/os image show build-image-server --format=value --column status)
+            sleep 5
+          done
+
+      - name: Delete server
+        run: |
+          ./scripts/os server delete build-image-server
+
+      - name: Delete key pair
+        run: ./scripts/os keypair delete build_keypair

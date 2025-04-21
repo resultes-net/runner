@@ -26,7 +26,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f Dockerfile-prefect -t ghcr.io/spf-ost/resultes-runner-prefect:latest .
+          docker build -f Dockerfile-prefect -t d .
 
       - name: Push Docker image
         id: push

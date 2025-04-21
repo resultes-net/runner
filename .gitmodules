@@ -1,0 +1,3 @@
+[submodule "create-openstack-image/dev-utils"]
+	path = create-openstack-image/dev-utils
+	url = git@github.com:resultes-net/dev-utils.git
