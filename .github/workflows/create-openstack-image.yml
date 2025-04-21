@@ -110,7 +110,7 @@ jobs:
 
       - name: Create `resultes` folder
         run: |
-          ./scripts/ssh mkdir results
+          ./scripts/ssh mkdir resultes
           
       - name: Copy Python to server
         run: |
