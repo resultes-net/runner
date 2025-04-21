@@ -108,7 +108,7 @@ jobs:
         run: |
           ./scripts/ssh mkdir resultes
 
-      - name: Download Python
+      - name: Download Python onto server
         run: |
           ./scripts/ssh \
             '$ProgressPreference="SilentlyContinue";' \
