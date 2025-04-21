@@ -103,19 +103,20 @@ jobs:
           else
             echo "Connected successfully."
           fi
-      
-      - name: Download Python
-        run: |
-          wget https://www.python.org/ftp/python/3.13.3/python-3.13.3-amd64.exe
 
       - name: Create `resultes` folder
         run: |
           ./scripts/ssh mkdir resultes
-          
-      - name: Copy Python to server
+
+      - name: Download Python
         run: |
-          ./scripts/scp python-3.13.3-amd64.exe resultes
-          
+          ./scripts/ssh \
+            '$ProgressPreference="SilentlyContinue";' \
+              Invoke-WebRequest \
+                -Uri https://www.python.org/ftp/python/3.13.3/python-3.13.3-amd64.exe \
+                -OutFile 'resultes\python-3.13.3-amd64.exe' \
+            '; $ProgressPreference="Continue";'
+
       - name: Install Python on server
         run: |
           ./scripts/ssh 'Start-Process -Wait .\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet'
@@ -163,7 +164,7 @@ jobs:
               Invoke-WebRequest -Headers "@{\"X-Auth-Token\" = \"$OS_AUTH_TOKEN\"}" \
                 -Uri "${OS_STORAGE_URL}/resultes/build-runner-image/TRNSYS18_resultes.zip?version-id=1745269323.13082" \
                 -OutFile TRNSYS18_resultes.zip \
-            '; $ProgressPreference="Continue";'W
+            '; $ProgressPreference="Continue";'
           
       - name: Unzip TRNSYS to C:\ on server
         run: |
