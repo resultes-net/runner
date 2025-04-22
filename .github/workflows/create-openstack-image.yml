@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: [ self-hosted, scale-set ]
+    runs-on: [ self-hosted, arc-runner-set ]
     
     defaults:
       run:
