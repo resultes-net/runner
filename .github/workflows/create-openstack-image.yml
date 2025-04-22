@@ -80,7 +80,7 @@ jobs:
       - name: Get volume ID
         run: |
           BUILD_IMAGE_SERVER_VOLUME_ID=$(./scripts/os server show build-image-server --format=json --column=volumes_attached | jq -r '.volumes_attached|.[0]|.id')
-          echo "BUILD_IMAGE_SERVER_VOLUME_ID=$volume_id" >> "$GITHUB_ENV"
+          echo "BUILD_IMAGE_SERVER_VOLUME_ID=BUILD_IMAGE_SERVER_VOLUME_ID" >> "$GITHUB_ENV"
 
       - name: Set up ssh agent
         uses: webfactory/ssh-agent@v0.9.0
