@@ -24,6 +24,12 @@ jobs:
         run: |
           chmod +x ./scripts/os ./scripts/ssh ./scripts/scp
 
+      - name: Install Python 3.12
+        run: |
+          add-apt-repository ppa:deadsnakes/ppa
+          apt update
+          apt install python3.12 python3.12-venv
+
       - name: Create virtual environment
         run: |
           python3.12 -m venv venv-linux
