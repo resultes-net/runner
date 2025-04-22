@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: [ ubuntu-24.04 ]
     
-    defaults: 
+    defaults:
       run:
         working-directory: create-openstack-image
 
@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        
+
       - name: Make scripts executable
         run: |
           chmod +x ./scripts/os ./scripts/ssh ./scripts/scp
@@ -64,7 +64,7 @@ jobs:
             sleep 5
           done
           set -e
-                    
+          
           if [ -z ip_address ] || [ "$ip_address" = "null" ]
           then
             false
@@ -77,10 +77,15 @@ jobs:
             echo "SSH_LOCATION=$SSH_LOCATION" >> "$GITHUB_ENV"
           fi
 
+      - name: Get volume ID
+        run: |
+          BUILD_IMAGE_SERVER_VOLUME_ID=$(./scripts/os server show build-image-server --format=json --column=volumes_attached | jq -r '.volumes_attached|.[0]|.id')
+          echo "BUILD_IMAGE_SERVER_VOLUME_ID=$volume_id" >> "$GITHUB_ENV"
+
       - name: Set up ssh agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
-            ssh-private-key: ${{ secrets.BUILD_IMAGE_SERVER_PRIVATE_SSH_KEY }}
+          ssh-private-key: ${{ secrets.BUILD_IMAGE_SERVER_PRIVATE_SSH_KEY }}
 
       - name: Wait till can connect via SSH
         run: |
@@ -120,20 +125,20 @@ jobs:
       - name: Install Python on server
         run: |
           ./scripts/ssh 'Start-Process .\resultes\python-3.13.3-amd64.exe -Wait -ArgumentList /quiet'
-          
+
       - name: Enable long paths on server
         run: |
           ./scripts/ssh New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' \
             -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
-          
+
       - name: Restart console so installation takes effect
         run: |
           ssh -o ControlPath=~/.ssh/master-build_image_server -O exit "$SSH_LOCATION"
-          
+
       - name: Show Python version
         run: |
           ./scripts/ssh py -0
-        
+
       - name: Copy `src` folder to server
         run: |
           ./scripts/scp -r ../requirements-3.13 ../src resultes
@@ -141,12 +146,12 @@ jobs:
       - name: Create venv on server
         run: |
           ./scripts/ssh 'py -3.13 -m venv resultes\venv3.13'
-          
+
       - name: Install requirements on server
         run: |
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m uv pip install -r resultes\requirements-3.13\requirements-3rd-party.txt'
-          
+
       - name: Install service on server
         run: |
           ./scripts/ssh New-Service -Name '"ResulTES runner"' -BinaryPathName \
@@ -156,7 +161,7 @@ jobs:
       - name: Authenticate to swift
         run: |
           swift auth | awk '{print $2}' >> "$GITHUB_ENV"
-          
+
       - name: Download TRNSYS onto server
         run: |
           ./scripts/ssh \
@@ -165,11 +170,11 @@ jobs:
                 -Uri "${OS_STORAGE_URL}/resultes/build-runner-image/TRNSYS18_resultes.zip?version-id=1745269323.13082" \
                 -OutFile TRNSYS18_resultes.zip \
             '; $ProgressPreference="Continue";'
-          
+
       - name: Unzip TRNSYS to C:\ on server
         run: |
           ./scripts/ssh Expand-Archive -Path 'resultes\TRNSYS18_resultes.zip' -DestinationPath 'C:\\'
-      
+
       - name: Build image from server
         run: |
           ./scripts/os server image create build-image-server
@@ -184,6 +189,14 @@ jobs:
       - name: Delete server
         run: |
           ./scripts/os server delete build-image-server
+        if: ${{ always() }}
+
+      - name: Delete volume
+        run: |
+          ./scripts/os volume delete "$BUILD_IMAGE_SERVER_VOLUME_ID"
+        if: ${{ always() }}
 
       - name: Delete key pair
-        run: ./scripts/os keypair delete build_keypair
+        run: |
+          ./scripts/os keypair delete build_keypair
+        if: ${{ always() }}
