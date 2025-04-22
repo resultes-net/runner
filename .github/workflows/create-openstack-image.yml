@@ -79,7 +79,10 @@ jobs:
 
       - name: Get volume ID
         run: |
-          BUILD_IMAGE_SERVER_VOLUME_ID=$(./scripts/os server show build-image-server --format=json --column=volumes_attached | jq -r '.volumes_attached|.[0]|.id')
+          BUILD_IMAGE_SERVER_VOLUME_ID=\$( \
+            ./scripts/os server show build-image-server --format=json --column=volumes_attached \
+            | jq -r '.volumes_attached|.[0]|.id' \
+          )
           echo "BUILD_IMAGE_SERVER_VOLUME_ID=$BUILD_IMAGE_SERVER_VOLUME_ID" >> "$GITHUB_ENV"
 
       - name: Set up ssh agent
@@ -124,7 +127,25 @@ jobs:
 
       - name: Install Python on server
         run: |
-          ./scripts/ssh 'Start-Process .\resultes\python-3.13.3-amd64.exe -Wait -ArgumentList /quiet' || true
+          set +e
+          success="false"
+          for i in $(seq 1 3)
+          do
+            ./scripts/ssh 'Start-Process .\resultes\python-3.13.3-amd64.exe -Wait -ArgumentList /quiet'
+            if [ "$success" = "true" ]
+            then
+              break
+            fi
+            sleep 5
+          done
+          set -e
+
+          if [ "$success" = "false" ]
+          then
+            false
+          else
+            echo "Python 3.13 installed."
+          fi          
 
       - name: Enable long paths on server
         run: |
