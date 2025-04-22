@@ -79,7 +79,7 @@ jobs:
 
       - name: Get volume ID
         run: |
-          BUILD_IMAGE_SERVER_VOLUME_ID=\$( \
+          BUILD_IMAGE_SERVER_VOLUME_ID=$( \
             ./scripts/os server show build-image-server --format=json --column=volumes_attached \
             | jq -r '.volumes_attached|.[0]|.id' \
           )
