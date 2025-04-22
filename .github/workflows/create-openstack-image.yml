@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: [ ubuntu-24.04 ]
+    runs-on: [ self-hosted, scale-set ]
     
     defaults:
       run:
