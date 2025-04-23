@@ -184,7 +184,7 @@ jobs:
 
       - name: Authenticate to swift
         run: |
-          swift auth | awk '{print $2}' >> "$GITHUB_ENV"
+          venv-linux/bin/swift auth | awk '{print $2}' >> "$GITHUB_ENV"
 
       - name: Download TRNSYS onto server
         run: |
