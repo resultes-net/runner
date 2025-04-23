@@ -175,7 +175,7 @@ jobs:
             '$ProgressPreference="SilentlyContinue";' \
               Invoke-WebRequest -Headers "@{\"X-Auth-Token\" = \"$OS_AUTH_TOKEN\"}" \
                 -Uri "${OS_STORAGE_URL}/resultes/build-runner-image/TRNSYS18_resultes.zip?version-id=1745269323.13082" \
-                -OutFile resultes\TRNSYS18_resultes.zip \
+                -OutFile 'resultes\TRNSYS18_resultes.zip' \
             '; $ProgressPreference="Continue";'
 
       - name: Unzip TRNSYS to C:\ on server
@@ -200,29 +200,6 @@ jobs:
       - name: Delete server
         run: |
           ./scripts/os server delete build-image-server
-        if: ${{ always() }}
-
-      - name: Delete volume
-        run: |
-          set +e
-          success="false"
-          for i in $(seq 1 10)
-          do
-            ./scripts/os volume delete "$BUILD_IMAGE_SERVER_VOLUME_ID"
-            if [ "$success" = "true" ]
-            then
-              break
-            fi
-            sleep 5
-          done
-          set -e
-
-          if [ "$success" = "false" ]
-          then
-            false
-          else
-            echo "Volume \"$BUILD_IMAGE_SERVER_VOLUME_ID\" deleted."
-          fi
         if: ${{ always() }}
 
       - name: Delete key pair
