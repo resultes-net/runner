@@ -140,12 +140,12 @@ jobs:
           success="false"
           for i in $(seq 1 10)
           do
-            success=$(ssh "$SSH_LOCATION" 'py -0')
+            ssh "$SSH_LOCATION" 'py -0' && success="true"
             if [ "$success" = "true" ]
             then
               break
             fi
-            sleep 5
+            sleep 20
           done
           set -e
 
