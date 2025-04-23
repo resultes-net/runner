@@ -37,9 +37,9 @@ jobs:
         run: |
           ./scripts/os project list
 
-      - name: Remove old build-image-runner image
+      - name: Remove old `build-image-server` image
         run: |
-          ./scripts/os image delete build-image-runner
+          ./scripts/os image delete build-image-server
 
       - name: Create private key file
         run: |
