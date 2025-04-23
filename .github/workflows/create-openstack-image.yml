@@ -37,6 +37,10 @@ jobs:
         run: |
           ./scripts/os project list
 
+      - name: Remove old build-image-runner image
+        run: |
+          ./scripts/os image delete build-image-runner
+
       - name: Create private key file
         run: |
           echo "$BUILD_KEYPAIR_PRIVATE_KEY" > config/build_keypair

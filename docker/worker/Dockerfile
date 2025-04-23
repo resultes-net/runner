@@ -6,9 +6,9 @@ RUN  New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" 
 
 WORKDIR /app
 
-COPY requirements3.13/pytrnsys.txt requirements3.13/
+COPY requirements-3.13/pytrnsys.txt requirements/
 
-RUN python -m pip install --no-cache-dir -r requirements3.13/pytrnsys.txt
+RUN python -m uv pip install --no-cache-dir -r requirements/pytrnsys.txt
 
 WORKDIR /app/src
 
