@@ -136,25 +136,8 @@ jobs:
 
       - name: Show Python version
         run: |
-          set +e
-          success="false"
-          for i in $(seq 1 10)
-          do
-            ssh "$SSH_LOCATION" 'py -3.13 -V' && success="true"
-            if [ "$success" = "true" ]
-            then
-              break
-            fi
-            sleep 20
-          done
-          set -e
+          ssh "$SSH_LOCATION" 'py -3.13 -V'
 
-          if [ "$success" = "false" ]
-          then
-            false
-          else
-            echo "Python 3.13 installed."
-          fi
 
       - name: Restart console so installation takes effect
         run: |
@@ -184,7 +167,7 @@ jobs:
 
       - name: Authenticate to swift
         run: |
-          venv-linux/bin/swift auth | awk '{print $2}' >> "$GITHUB_ENV"
+          ./scripts/swift auth | awk '{print $2}' >> "$GITHUB_ENV"
 
       - name: Download TRNSYS onto server
         run: |
