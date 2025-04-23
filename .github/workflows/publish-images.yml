@@ -31,7 +31,7 @@ jobs:
       - name: Push Docker image
         id: push
         run: |
-          $image_digest=$(py -3.12 push_docker_image_and_get_digest.py ghcr.io/spf-ost/resultes-runner-prefect:latest)
+          $image_digest=$(py -3.12 push_docker_image_and_get_digest.py ghcr.io/resultes-net/resultes-runner-prefect:latest)
           echo "image_digest=${image_digest}" >> $env:GITHUB_OUTPUT
   
   build-and-push-images:
@@ -64,10 +64,10 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -f ${{ matrix.dockerfile }} -t ghcr.io/spf-ost/${{ matrix.name }}:latest .
+          docker build -f ${{ matrix.dockerfile }} -t ghcr.io/resultes-net/${{ matrix.name }}:latest .
 
       - name: Push Docker image
         id: push
         run: |
-          $image_digest=$(py -3.12 push_docker_image_and_get_digest.py ghcr.io/spf-ost/${{ matrix.name }}:latest)
+          $image_digest=$(py -3.12 push_docker_image_and_get_digest.py ghcr.io/resultes-net/${{ matrix.name }}:latest)
           echo "image_digest=${image_digest}" >> $env:GITHUB_OUTPUT
