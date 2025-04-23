@@ -22,7 +22,7 @@ jobs:
 
       - name: Make scripts executable
         run: |
-          chmod +x ./scripts/os ./scripts/ssh ./scripts/scp
+          chmod +x ./scripts/os ./scripts/ssh ./scripts/scp ./scripts/swift
 
       - name: Create virtual environment
         run: |
