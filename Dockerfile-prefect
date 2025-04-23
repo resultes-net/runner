@@ -9,5 +9,5 @@ COPY requirements/prefect.txt requirements/
 RUN nslookup pypi.org
 RUN ipconfig /all
 
-RUN python -m pip install --no-cache-dir --upgrade wheel pip
-RUN python -m pip install --no-cache-dir -r requirements/prefect.txt
+RUN python -m pip install --no-cache-dir --upgrade wheel pip uv
+RUN python -m uv pip install --no-cache-dir -r requirements/prefect.txt
