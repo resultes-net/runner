@@ -24,12 +24,6 @@ jobs:
         run: |
           chmod +x ./scripts/os ./scripts/ssh ./scripts/scp
 
-      - name: Install Python 3.12
-        run: |
-          sudo add-apt-repository ppa:deadsnakes/ppa
-          sudo apt update
-          sudo apt install python3.12 python3.12-venv
-
       - name: Create virtual environment
         run: |
           python3.12 -m venv venv-linux
@@ -161,10 +155,12 @@ jobs:
           else
             echo "Python 3.13 installed."
           fi
-          
+
       - name: Restart console so installation takes effect
         run: |
-          ssh -o ControlPath=~/.ssh/master-build_image_server -O exit "$SSH_LOCATION"
+          if [ -f ~/.ssh/master-build_image_server ]; then
+            ssh -o ControlPath=~/.ssh/master-build_image_server -O exit "$SSH_LOCATION"
+          fi
 
       - name: Copy `src` folder to server
         run: |
@@ -212,34 +208,34 @@ jobs:
             status=$(./scripts/os image show build-image-server --format=value --column status)
             sleep 5
           done
-
-#      - name: Delete server
-#        run: |
-#          ./scripts/os server delete build-image-server
-#        if: ${{ always() }}
-#
-#      - name: Delete volume
-#        run: |
-#          set +e
-#          success="false"
-#          for i in $(seq 1 10)
-#          do
-#            ./scripts/os volume delete "$BUILD_IMAGE_SERVER_VOLUME_ID"
-#            if [ "$success" = "true" ]
-#            then
-#              break
-#            fi
-#            sleep 5
-#          done
-#          set -e
-#          
-#          if [ "$success" = "false" ]
-#          then
-#            false
-#          else
-#            echo "Volume \"$BUILD_IMAGE_SERVER_VOLUME_ID\" deleted."
-#          fi
-#        if: ${{ always() }}
+      
+      #      - name: Delete server
+      #        run: |
+      #          ./scripts/os server delete build-image-server
+      #        if: ${{ always() }}
+      #
+      #      - name: Delete volume
+      #        run: |
+      #          set +e
+      #          success="false"
+      #          for i in $(seq 1 10)
+      #          do
+      #            ./scripts/os volume delete "$BUILD_IMAGE_SERVER_VOLUME_ID"
+      #            if [ "$success" = "true" ]
+      #            then
+      #              break
+      #            fi
+      #            sleep 5
+      #          done
+      #          set -e
+      #          
+      #          if [ "$success" = "false" ]
+      #          then
+      #            false
+      #          else
+      #            echo "Volume \"$BUILD_IMAGE_SERVER_VOLUME_ID\" deleted."
+      #          fi
+      #        if: ${{ always() }}
 
       - name: Delete key pair
         run: |
