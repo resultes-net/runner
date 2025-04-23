@@ -7,6 +7,8 @@ on:
 
 jobs:
   build:
+    concurrency: build-image-runner_serialized
+    
     runs-on: ubuntu-24.04
     
     defaults:
