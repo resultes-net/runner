@@ -169,7 +169,7 @@ jobs:
 
       - name: Create venv on server
         run: |
-          ./scripts/ssh 'py -3.13 -m venv resultes\venv3.13'
+          ssh "$SSH_LOCATION" 'py -3.13 -m venv resultes\venv3.13'
 
       - name: Install requirements on server
         run: |
