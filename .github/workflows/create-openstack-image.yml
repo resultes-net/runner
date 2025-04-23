@@ -127,7 +127,7 @@ jobs:
 
       - name: Install Python on server
         run: |
-          ssh -vvv "$SSH_LOCATION" 'Start-Process -Wait .\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet'
+          ssh "$SSH_LOCATION" 'Start-Process -Wait .\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet'
 
       - name: Enable long paths on server
         run: |
