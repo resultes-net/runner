@@ -1,4 +1,4 @@
-FROM ghcr.io/spf-ost/resultes-runner-prefect
+FROM ghcr.io/resultes-net/resultes-runner-prefect
 
 SHELL ["powershell", "-command"]
 
