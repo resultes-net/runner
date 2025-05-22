@@ -1,0 +1,5 @@
+-c constraints.txt
+
+-r dev-3rd-party.in
+
+-e file:pydantic-models
