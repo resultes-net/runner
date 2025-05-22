@@ -1,18 +1,20 @@
-import asyncio as _asyncio
-import collections.abc as _cabc
 
-import resultes_pydantic_models.simulations.parameters.ttes as _pttes
-import resultes_pydantic_models.simulations.variation as _var
-
+import pydantic as _pyd
 import tabella as _tab
+
+
+class Vector3(_pyd.BaseModel):
+    x: float
+    y: float
+    z: float
 
 
 rpc = _tab.Tabella(title="ResulTES runner server", version="1.0.0")
 
 
 @rpc.method()
-async def create_variations(vector: _sb.Vector3) -> _cabc.Sequence[_var.Variation]:
-    return _var.Variation()
+async def create_variations(vector: Vector3) -> int:
+    return 17
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 -c constraints.txt
 
--r build-3rd-party.in
+-r run-3rd-party.in
 
 pip-compile-multi
 black
