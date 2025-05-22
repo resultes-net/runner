@@ -163,12 +163,12 @@ jobs:
       - name: Install requirements on server
         run: |
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
-          ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m uv pip install -r resultes\requirements-3.13\requirements-3rd-party.txt'
+          ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m uv pip install -r resultes\requirements-3.13\run-3rd-party.txt'
 
       - name: Install service on server
         run: |
           ./scripts/ssh New-Service -Name '"ResulTES runner"' -BinaryPathName \
-            '"C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe C:\Users\Administrator\resultes\src\worker.py"' \
+            '"C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe C:\Users\Administrator\resultes\src\main.py"' \
             -StartupType Automatic
 
       - name: Authenticate to swift
