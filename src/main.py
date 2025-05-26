@@ -4,13 +4,12 @@ import os as _os
 import secrets as _secs
 import signal as _sig
 import socket as _soc
+import typing as _tp
 
 import jsonrpcserver as _jrpcs
 import resultes_pydantic_models.simulations.parameters.ttes as _pttes
 import websockets as _ws
 import websockets.asyncio.server as _wsas
-
-TERMINATION_TIMEOUT_SECONDS = 15
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
 
@@ -29,8 +28,12 @@ LOG_LEVEL = _os.environ.get("LOG_LEVEL", "DEBUG")
 _shutdown_event = _asyncio.Event()
 
 
-def _on_sigterm(signal, stack_frame) -> None:
-    _log.info("Received SIGTERM. Shutting down.")
+def _on_ctrl_c(signal, stack_frame) -> None:
+    if _shutdown_event.is_set():
+        _log.info("Received Ctrl-C second time: raising keyboard interrupt.")
+        raise KeyboardInterrupt()
+
+    _log.info("Received Ctrl-C first time.")
     _shutdown_event.set()
 
 
@@ -52,16 +55,36 @@ async def create_variations(parameters: _pttes.TtesParameters) -> _jrpcs.Result:
     return _jrpcs.Success(result)
 
 
+class _TerminateTaskGroupException(Exception):
+    pass
+
+
+async def _terminate_task_group() -> _tp.NoReturn:
+    raise _TerminateTaskGroupException()
+
+
+async def _terminate_task_group_on_shutdown_event() -> _tp.NoReturn:
+    await _shutdown_event.wait()
+    raise _TerminateTaskGroupException()
+
 
 async def _handle_connection(server_connection: _wsas.ServerConnection) -> None:
     _log.info("Client %s connected.", server_connection.id)
 
     try:
-        while True:
-            data = await server_connection.recv(decode=True)
-            await _handle_request(data, server_connection)
-    except _ws.ConnectionClosedOK:
-        _log.info("Client %s disconnected.", server_connection.id)
+        async with _asyncio.TaskGroup() as task_group:
+            task_group.create_task(_terminate_task_group_on_shutdown_event())
+
+            try:
+                while not _shutdown_event.is_set():
+                    data = await server_connection.recv(decode=True)
+                    await _handle_request(data, server_connection, task_group)
+
+            except _ws.ConnectionClosedOK:
+                _log.info("Client %s disconnected.", server_connection.id)
+                await task_group.create_task(_terminate_task_group())
+
+    except* _TerminateTaskGroupException:
         pass
 
 
@@ -70,14 +93,14 @@ _tasks = set[_asyncio.Task[None]]()
 
 def _on_task_done(task: _asyncio.Task[None]) -> None:
     _log.debug("Task %s is done.", task.get_name())
-    _tasks.remove(task)
 
 
-async def _handle_request(data: str, server_connection: _wsas.ServerConnection) -> None:
+async def _handle_request(
+    data: str, server_connection: _wsas.ServerConnection, task_group: _asyncio.TaskGroup
+) -> None:
     coroutine = _dispatch_request(data, server_connection)
-    task = _asyncio.create_task(coroutine)
+    task = task_group.create_task(coroutine)
     _log.debug("Task %s has been started.", task.get_name())
-    _tasks.add(task)
     task.add_done_callback(_on_task_done)
 
 
@@ -92,38 +115,8 @@ async def _server() -> None:
     async with _ws.serve(_handle_connection, HOST, PORT):
         await _shutdown_event.wait()
 
-        _log.info("Received shutdown event")
-
-        if _tasks:
-            _log.info("Cancelling %d task(s).", len(_tasks))
-
-            for task in _tasks:
-                _log.debug("Cancelling task %s.", task.get_name())
-                task.cancel()
-
-            _log.info("Sent cancellation to tasks. Waiting for termination...")
-
-            _, incomplete_tasks = await _asyncio.wait(
-                _tasks, timeout=TERMINATION_TIMEOUT_SECONDS
-            )
-
-            if incomplete_tasks:
-                _log.warning(
-                    "%d task(s) did not terminate after %f second(s).",
-                    len(incomplete_tasks),
-                    TERMINATION_TIMEOUT_SECONDS,
-                )
-                formatted_incomplete_task_names = ", ".join(
-                    t.get_name() for t in incomplete_tasks
-                )
-
-                _log.debug(
-                    "The following tasks did not terminate: %s.",
-                    formatted_incomplete_task_names,
-                )
-
 
 if __name__ == "__main__":
-    _sig.signal(_sig.SIGTERM, _on_sigterm)
+    _sig.signal(_sig.SIGINT, _on_ctrl_c)
     _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
     _asyncio.run(_server())
