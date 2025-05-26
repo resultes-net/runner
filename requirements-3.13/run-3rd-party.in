@@ -2,6 +2,5 @@
 
 https://github.com/SPF-OST/pytrnsys/archive/refs/heads/master.zip
 
-openrpc
-tabella
-aiohttp
+websockets
+jsonrpcserver

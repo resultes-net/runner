@@ -6,11 +6,17 @@
 #    requirements upgrade
 #
 -r run-3rd-party.txt
+black==25.1.0
 build==1.2.2.post1
+click==8.2.1
+colorama==0.4.6
 mypy==1.15.0
+mypy-extensions==1.1.0
+pathspec==0.12.1
 pip==25.1.1
 pip-compile-multi==3.0.0
 pip-tools==7.4.1
+platformdirs==4.3.8
 pyproject-hooks==1.2.0
 setuptools==80.7.1
 toposort==1.10
