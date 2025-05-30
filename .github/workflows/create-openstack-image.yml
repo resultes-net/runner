@@ -183,11 +183,11 @@ jobs:
 
       - name: Authenticate to swift
         run: |
-          ./scripts/swift auth | awk '{print $2}' >> "$GITHUB_ENV"
-
-      - name: Mask OS_AUTH_TOKEN
-        run: |
+          ./scripts/swift auth | awk '{print $2}' > swift-auth-output
+          cat swift-auth-output >> "$GITHUB_ENV"
+          . swift-auth-output
           echo "::add-mask::$OS_AUTH_TOKEN"
+          rm swift-auth-output
 
       - name: Download TRNSYS onto server
         run: |
