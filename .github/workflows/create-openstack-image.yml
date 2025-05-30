@@ -73,7 +73,7 @@ jobs:
             then
               break
             fi
-            sleep 10
+            sleep 15
           done
           set -e
           
