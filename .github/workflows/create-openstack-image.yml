@@ -48,11 +48,7 @@ jobs:
             echo "value='false'" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Report "image exists status"
-        run: |
-          echo ${{ steps.image-exists.outputs.value }}
-
-      - if: ${{ steps.image-exists.outputs.value == 'true' }}
+      - if: steps.image-exists.outputs.value == 'true'
         name: Remove old `build-image-server` image
         run: |
           ./scripts/os image delete build-image-server
