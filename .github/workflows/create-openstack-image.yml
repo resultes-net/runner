@@ -48,6 +48,10 @@ jobs:
             echo "value='false'" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Report "image exists status"
+        run: |
+          echo ${{ steps.image-exists.outputs.value }}
+
       - if: ${{ steps.image-exists.outputs.value == 'true' }}
         name: Remove old `build-image-server` image
         run: |
@@ -211,7 +215,7 @@ jobs:
           ./scripts/os server image create build-image-server
           
           status=""
-          while [ -z "$status" || "$status" != "active" ]
+          while [ -z "$status" ] || [ "$status" != "active" ]
           do
             status=$(./scripts/os image show build-image-server --format=value --column status)
             sleep 5
