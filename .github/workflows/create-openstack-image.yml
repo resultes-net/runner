@@ -173,7 +173,7 @@ jobs:
       - name: Install requirements on server
         run: |
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
-          ./scripts/ssh '(cd resultes && venv3.13\Scripts\python -m uv pip install -r requirements-3.13\run.txt)'
+          ./scripts/ssh 'Start-Process -Wait .\resultes\venv3.13\Scripts\python -WorkingDirectory resultes -ArgumentList -m, uv, pip, install, -r, requirements-3.13\run.txt'
 
       - name: Install service on server
         run: |
