@@ -43,12 +43,12 @@ jobs:
         id: image-exists
         run: |
           if ./scripts/os image show "build-image-server"; then
-            echo "value=true" >> "$GITHUB_OUTPUT"
+            echo "value='true'" >> "$GITHUB_OUTPUT"
           else
-            echo "value=false" >> "$GITHUB_OUTPUT"
+            echo "value='false'" >> "$GITHUB_OUTPUT"
           fi
 
-      - if:  ${{ steps.image-exists.outputs.value }}
+      - if: ${{ steps.image-exists.outputs.value == 'true' }}
         name: Remove old `build-image-server` image
         run: |
           ./scripts/os image delete build-image-server
