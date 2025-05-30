@@ -154,7 +154,6 @@ jobs:
         run: |
           ssh "$SSH_LOCATION" 'py -3.13 -V'
 
-
       - name: Restart console so installation takes effect
         run: |
           if [ -f ~/.ssh/master-build_image_server ]; then
@@ -171,9 +170,10 @@ jobs:
           ssh "$SSH_LOCATION" 'py -3.13 -m venv resultes\venv3.13'
 
       - name: Install requirements on server
+        working-directory: resultes
         run: |
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
-          ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m uv pip install -r resultes\requirements-3.13\run.txt'
+          ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m uv pip install -r requirements-3.13\run.txt'
 
       - name: Install service on server
         run: |
