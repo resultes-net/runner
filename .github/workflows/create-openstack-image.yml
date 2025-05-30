@@ -39,19 +39,15 @@ jobs:
         run: |
           ./scripts/os project list
 
-      - name: Check if old `build-image-server` image exists
+      - name: Check if old `build-image-server` image exists and remove if needed
         id: image-exists
         run: |
-          if ./scripts/os image show "build-image-server"; then
-            echo "value='true'" >> "$GITHUB_OUTPUT"
+          if ./scripts/os image show "build-image-server" >&1; then
+            echo "Image already exists."
+            ./scripts/os image delete build-image-server
           else
-            echo "value='false'" >> "$GITHUB_OUTPUT"
+            echo "Image doesn't yet exist."
           fi
-
-      - if: steps.image-exists.outputs.value == 'true'
-        name: Remove old `build-image-server` image
-        run: |
-          ./scripts/os image delete build-image-server
 
       - name: Create private key file
         run: |
