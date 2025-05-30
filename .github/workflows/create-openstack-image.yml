@@ -164,7 +164,7 @@ jobs:
 
       - name: Copy `src` folder to server
         run: |
-          ./scripts/scp -r ../requirements-3.13 ../src resultes
+          ./scripts/scp -r ../requirements-3.13 ../src ../pydantic-models resultes
 
       - name: Create venv on server
         run: |
