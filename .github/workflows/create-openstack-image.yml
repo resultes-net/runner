@@ -194,7 +194,7 @@ jobs:
           ./scripts/ssh \
             '$ProgressPreference="SilentlyContinue";' \
               Invoke-WebRequest -Headers "@{\"X-Auth-Token\" = \"$OS_AUTH_TOKEN\"}" \
-                -Uri "${OS_STORAGE_URL}/resultes/build-runner-image/TRNSYS18_resultes.zip?version-id=1745269323.13082" \
+                -Uri "${OS_STORAGE_URL}/resultes/build-runner-image/TRNSYS18_resultes.zip?version-id=1748642361.11018" \
                 -OutFile 'resultes\TRNSYS18_resultes.zip' \
             '; $ProgressPreference="Continue";'
 
