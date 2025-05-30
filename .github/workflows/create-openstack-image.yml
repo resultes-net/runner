@@ -42,10 +42,10 @@ jobs:
       - name: Check if old `build-image-server` image exists
         id: image-exists
         run: |
-          if ./scripts/os image show "build-image-server"; then
-            echo "true" >> "$GITHUB_OUTPUT"
+          if ./scripts/os image show "build-image-server" &>1 /dev/null; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
           else
-            echo "false" >> "$GITHUB_OUTPUT"
+            echo "value=false" >> "$GITHUB_OUTPUT"
           fi
 
       - if:  ${{ steps.image-exists.outputs.value }}
