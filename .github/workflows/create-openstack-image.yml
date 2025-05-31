@@ -169,7 +169,7 @@ jobs:
       - name: Install requirements on server
         run: |
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
-          ./scripts/ssh 'Start-Process -Wait .\resultes\venv3.13\Scripts\python -WorkingDirectory resultes -ArgumentList "-m uv pip install -r requirements-3.13\run.txt"'
+          ./scripts/ssh 'Start-Process -Wait -NoNewWindow .\resultes\venv3.13\Scripts\python.exe -WorkingDirectory resultes -ArgumentList "-m uv pip install -r requirements-3.13\run.txt"'
 
       - name: Allow incoming traffic on port 3000
         run: |
