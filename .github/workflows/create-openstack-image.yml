@@ -171,6 +171,10 @@ jobs:
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
           ./scripts/ssh 'Start-Process -Wait .\resultes\venv3.13\Scripts\python -WorkingDirectory resultes -ArgumentList "-m uv pip install -r requirements-3.13\run.txt"'
 
+      - name: Allow incoming traffic on port 3000
+        run: |
+          ./scripts/ssh 'New-NetFirewallRule -DisplayName "ResulTES" -Direction Inbound -Program C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe -Profile Public -Protocol TCP -LocalPort 3000 -Action Allow'
+
       - name: Install service on server
         run: |
           ./scripts/ssh New-Service -Name '"ResulTES runner"' -BinaryPathName \

@@ -23,7 +23,7 @@ def _get_host() -> str:
 HOST = _get_host()
 PORT = 3000
 
-LOG_LEVEL = _os.environ.get("LOG_LEVEL", "DEBUG")
+LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
 
 _shutdown_event = _asyncio.Event()
 
