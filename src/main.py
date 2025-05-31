@@ -1,6 +1,8 @@
 import asyncio as _asyncio
 import logging as _log
+import logging.handlers as _handlers
 import os as _os
+import pathlib as _pl
 import secrets as _secs
 import signal as _sig
 import socket as _soc
@@ -116,7 +118,20 @@ async def _server() -> None:
         await _shutdown_event.wait()
 
 
+def _setup_logging() -> None:
+    stream_handler = _log.StreamHandler()
+
+    log_file_path = _pl.Path(__file__).parent / "runner.log"
+    file_handler = _handlers.RotatingFileHandler(
+        log_file_path, maxBytes=5 * 1024, backupCount=10
+    )
+
+    handlers: list[_log.Handler] = [stream_handler, file_handler]
+
+    _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
+
+
 if __name__ == "__main__":
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
-    _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
+    _setup_logging()
     _asyncio.run(_server())
