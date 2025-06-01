@@ -186,15 +186,28 @@ jobs:
           ./scripts/ssh '.\resultes\venv3.13\Scripts\python -m pip install --upgrade wheel pip uv'
           ./scripts/ssh 'Start-Process -Wait -NoNewWindow .\resultes\venv3.13\Scripts\python.exe -WorkingDirectory resultes -ArgumentList "-m uv pip install -r requirements-3.13\run.txt"'
 
+      - name: Download NSSM onto server
+        run: |
+          ./scripts/ssh \
+            '$ProgressPreference="SilentlyContinue";' \
+              Invoke-WebRequest \
+                -Uri https://nssm.cc/release/nssm-2.24.zip \
+                -OutFile 'resultes\nssm-2.24.zip' \
+            '; $ProgressPreference="Continue";'
+
+      - name: Unzip NSSM to C:\ on server
+        run: |
+          ./scripts/ssh Expand-Archive -Path 'resultes\nssm-2.24.zip' -DestinationPath 'resultes'
+
       - name: Allow incoming traffic on port 3000
         run: |
-          ./scripts/ssh 'New-NetFirewallRule -DisplayName "ResulTES" -Direction Inbound -Program C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe -Profile Public -Protocol TCP -LocalPort 3000 -Action Allow'
+          ./scripts/ssh New-NetFirewallRule -DisplayName ResulTES -Direction Inbound \
+            -Program 'C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe' -Profile Public -Protocol TCP -LocalPort 3000 -Action Allow
 
       - name: Install service on server
         run: |
-          ./scripts/ssh New-Service -Name '"ResulTES runner"' -BinaryPathName \
-            '"C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe C:\Users\Administrator\resultes\src\main.py"' \
-            -StartupType Automatic
+          ./scripts/ssh '.\resultes\nssm-2.24\win64\nssm.exe' install \
+            ResulTES 'C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe' 'C:\Users\Administrator\resultes\src\main.py'
 
       - name: Authenticate to swift
         run: |
