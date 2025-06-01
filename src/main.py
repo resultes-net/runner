@@ -5,7 +5,6 @@ import os as _os
 import pathlib as _pl
 import secrets as _secs
 import signal as _sig
-import socket as _soc
 import typing as _tp
 
 import jsonrpcserver as _jrpcs
@@ -16,13 +15,6 @@ import websockets.asyncio.server as _wsas
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
 
 
-def _get_host() -> str:
-    dev_host = f"{_soc.gethostname()}.local"
-    host = _os.environ.get("HOST", dev_host)
-    return host
-
-
-HOST = _get_host()
 PORT = 3000
 
 LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
@@ -114,7 +106,7 @@ async def _dispatch_request(
 
 
 async def _server() -> None:
-    async with _ws.serve(_handle_connection, HOST, PORT):
+    async with _ws.serve(_handle_connection, port=PORT):
         await _shutdown_event.wait()
 
 
