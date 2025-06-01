@@ -195,7 +195,7 @@ jobs:
                 -OutFile 'resultes\nssm-2.24.zip' \
             '; $ProgressPreference="Continue";'
 
-      - name: Unzip NSSM to C:\ on server
+      - name: Unzip NSSM to `resultes`
         run: |
           ./scripts/ssh Expand-Archive -Path 'resultes\nssm-2.24.zip' -DestinationPath 'resultes'
 
