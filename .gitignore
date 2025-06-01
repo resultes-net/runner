@@ -3,3 +3,4 @@ venv3.13/
 .vscode/
 **/__pycache__/*
 **/.mypy_cache/*
+src/runner.log*

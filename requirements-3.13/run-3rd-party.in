@@ -2,5 +2,11 @@
 
 https://github.com/SPF-OST/pytrnsys/archive/refs/heads/master.zip
 
+pydantic
 websockets
 jsonrpcserver
+
+pyyaml
+
+python-keystoneclient
+python-swiftclient

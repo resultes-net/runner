@@ -6,8 +6,4 @@
 #    requirements upgrade
 #
 -r run-3rd-party.txt
-annotated-types==0.7.0
-pydantic==2.11.5
-pydantic-core==2.33.2
 resultes-pydantic-models @ file:pydantic-models
-typing-inspection==0.4.1
