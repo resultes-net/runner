@@ -202,7 +202,7 @@ jobs:
       - name: Allow incoming traffic on port 3000
         run: |
           ./scripts/ssh New-NetFirewallRule -DisplayName ResulTES -Direction Inbound \
-            -Program 'C:\Users\Administrator\resultes\venv3.13\Scripts\python.exe' -Profile Public -Protocol TCP -LocalPort 3000 -Action Allow
+            -Program 'C:\Users\Administrator\AppData\Local\Programs\Python\Python313\python.exe' -Profile Public -Protocol TCP -LocalPort 3000 -Action Allow
 
       - name: Install service on server
         run: |
