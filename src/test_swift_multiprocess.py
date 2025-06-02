@@ -9,14 +9,24 @@ import resultes_pydantic_models.pytrnsys as _mpytrnsys
 import swift_multiprocess as _swmp
 
 
+@_pt.mark.parametrize(
+    ("n_tasks", "n_processes", "max_queue_size", "timeout"),
+    (
+        (3, 4, 8, 20.0),
+        (7, 4, 8, 20.0),
+        (4, 4, 4, 20.0),
+    ),
+)
 @_pt.mark.asyncio
-async def test_download() -> None:
+async def test_download(
+    n_tasks: int, n_processes: int, max_queue_size: int, timeout: float
+) -> None:
     _log.basicConfig(format=_swmp.LOG_FORMAT, level=_swmp.LOG_LEVEL)
 
-    async with _swmp.Swift(n_processes=4, max_queue_size=8) as swift:
+    async with _swmp.Swift(n_processes, max_queue_size) as swift:
         try:
-            async with _asyncio.timeout(60):
-                coroutines = [download_trnsys(swift) for _ in range(3)]
+            async with _asyncio.timeout(timeout):
+                coroutines = [download_trnsys(swift) for _ in range(n_tasks)]
                 await _asyncio.gather(*coroutines)
         except TimeoutError:
             pass
@@ -36,4 +46,4 @@ async def download_trnsys(swift: _swmp.Swift) -> None:
 
 
 if __name__ == "__main__":
-    _asyncio.run(test_download())
+    _asyncio.run(test_download(3, 4, 8, 60.0))

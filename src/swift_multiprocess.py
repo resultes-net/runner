@@ -8,6 +8,7 @@ import multiprocessing as _mp
 import multiprocessing.queues as _mqueues
 import multiprocessing.synchronize as _msync
 import pathlib as _pl
+import queue as _queue
 import types as _tps
 import typing as _tp
 import uuid as _uuid
@@ -43,8 +44,9 @@ class _Reponse:
 _LOGGER = _log.getLogger()
 
 LOG_LEVEL = _log.INFO
-LOG_FORMAT = "%(process)d:%(thread)d: %(asctime)s - %(levelname)s - %(module)s - %(message)s"
-
+LOG_FORMAT = (
+    "%(process)d:%(thread)d: %(asctime)s - %(levelname)s - %(module)s - %(message)s"
+)
 
 
 class _RequestHandler:
@@ -103,6 +105,11 @@ class _RequestHandler:
 
 class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
     def __init__(self, n_processes: int, max_queue_size: int) -> None:
+        if n_processes > max_queue_size:
+            raise ValueError(
+                "The number of processes must be less than or equal to the maximum queue size."
+            )
+
         self._n_processes = n_processes
         self._max_queue_size = max_queue_size
 
@@ -157,17 +164,25 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         self._shutdown_event.set()
         self._got_response_event.set()
 
-        for _ in range(self._n_processes):
-            _LOGGER.info("Sending stop to request queue.")
-            self._request_queue.put(_Stop())
-
-        self._response_queue.put(_Stop())
+        self._try_put_stop_no_wait(self._request_queue, "request", n_stops=self._n_processes)
+        self._try_put_stop_no_wait(self._response_queue, "response")
 
         await _asyncio.wait([self._handle_responses_task])
 
         for process in self._handle_request_processes:
             process.join()
 
+    def _try_put_stop_no_wait[T](
+        self, queue: _mqueues.Queue[T | _Stop], queue_name: str, n_stops: int = 1
+    ) -> None:
+        # If the queue is empty, we might have to awake processes so that they can run to termination
+
+        try:
+            for _ in range(n_stops):
+                _LOGGER.info("Sending stop to %s queue.", queue_name)
+                queue.put_nowait(_Stop())
+        except _queue.Full:
+            pass
 
     async def _handle_responses(self) -> None:
         _LOGGER.info("Entering response handling loop.")
@@ -222,15 +237,15 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         request = _DownloadRequest(
             request_id, input_object_storage_path, output_file_path
         )
-        self._put_request_no_wait(request)
+        await _asyncio.to_thread(self._put_request, request)
 
         await self._wait_for_response(request_id)
 
-    def _put_request_no_wait(self, request_or_stop: _Request | _Stop) -> None:
+    def _put_request(self, request_or_stop: _Request | _Stop) -> None:
         if not self._request_queue:
             raise ValueError("Swift client has not been `aentere`d yet.")
 
-        self._request_queue.put_nowait(request_or_stop)
+        self._request_queue.put(request_or_stop)
 
     def _get_response_or_stop(self) -> _Reponse | _Stop:
         if not self._response_queue:
