@@ -6,3 +6,4 @@ pip-compile-multi
 black
 mypy
 pytest
+pytest-asyncio
