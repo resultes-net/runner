@@ -12,12 +12,12 @@ def test_create_connection() -> None:
 
 def test_download_trnsys() -> None:
     with _swift.create_connection() as connection:
-        object_storage_path = _mpytrnsys.ObjectStoragePath(
+        object_storage_zip_path = _mpytrnsys.ObjectStorageZipPath(
             container="resultes", path="build-runner-image/TRNSYS18_resultes.zip"
         )
         output_file_path = (
             _pl.Path(__file__).parent / "test_output" / "TRNSYS18_resultes.zip"
         )
         _swift.download_storage_object(
-            object_storage_path, output_file_path, connection
+            object_storage_zip_path, output_file_path, connection
         )

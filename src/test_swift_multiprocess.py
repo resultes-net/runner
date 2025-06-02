@@ -15,6 +15,7 @@ import swift_multiprocess as _swmp
         (3, 4, 8, 20.0),
         (7, 4, 8, 20.0),
         (4, 4, 4, 20.0),
+        (7, 4, 4, 20.0),
     ),
 )
 @_pt.mark.asyncio
@@ -33,16 +34,14 @@ async def test_download(
 
 
 async def download_trnsys(swift: _swmp.Swift) -> None:
-    object_storage_path = _mpytrnsys.ObjectStoragePath(
+    object_storage_zip_path = _mpytrnsys.ObjectStorageZipPath(
         container="resultes", path="build-runner-image/TRNSYS18_resultes.zip"
     )
     uuid = _uuid.uuid4()
     output_file_path = (
         _pl.Path(__file__).parent / "test_output" / f"TRNSYS18_resultes-{uuid}.zip"
     )
-    await swift.download(
-        object_storage_path.container, object_storage_path.path, output_file_path
-    )
+    await swift.download(object_storage_zip_path, output_file_path)
 
 
 if __name__ == "__main__":

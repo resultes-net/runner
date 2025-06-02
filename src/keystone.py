@@ -1,21 +1,15 @@
 import contextlib as _ctx
-import pathlib as _pl
 import typing as _tp
 
 import keystoneauth1.identity.v3 as _kidv3
 import keystoneauth1.session as _ksess
-import yaml as _yaml
+
+import clouds_yaml as _cyaml
 
 
 def create_application_credential() -> _kidv3.ApplicationCredential:
-    clouds_file_path = (
-        _pl.Path(__file__).parents[1] / "config" / "swiftoperator-clouds.yaml"
-    )
+    openstack = _cyaml.get_clouds_yaml_openstack_json()
 
-    with clouds_file_path.open() as stream:
-        data = _yaml.safe_load(stream)
-
-    openstack = data["clouds"]["openstack"]
     auth = openstack["auth"]
 
     application_credential = _kidv3.ApplicationCredential(**auth)

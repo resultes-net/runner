@@ -1,12 +1,13 @@
 import asyncio as _asyncio
-import concurrent.futures as _cf
+import collections.abc as _cabc
 import logging as _log
 import logging.handlers as _handlers
 import os as _os
 import pathlib as _pl
-import secrets as _secs
 import signal as _sig
+import sys as _sys
 import typing as _tp
+import zipfile as _zip
 
 import jsonrpcserver as _jrpcs
 import pydantic as _pyd
@@ -44,7 +45,7 @@ def _setup_logging() -> None:
 
     log_file_path = _pl.Path(__file__).parent / "runner.log"
     file_handler = _handlers.RotatingFileHandler(
-        log_file_path, maxBytes=5 * 1024, backupCount=10
+        log_file_path, maxBytes=5 * 1024 * 1024, backupCount=10
     )
 
     handlers: list[_log.Handler] = [stream_handler, file_handler]
@@ -52,12 +53,10 @@ def _setup_logging() -> None:
     _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
 
 
-class Server:
-    def __init__(self, port: int, executor: _cf.Executor) -> None:
+class _Server:
+    def __init__(self, port: int, swift: _swmp.Swift) -> None:
         self._port = port
-
-        self.executor = executor
-
+        self.swift = swift
         self._tasks = set[_asyncio.Task[None]]()
 
     async def _terminate_task_group(self) -> _tp.NoReturn:
@@ -114,8 +113,8 @@ class Server:
 
 
 @_jrpcs.method()
-async def run_python_in_pytrnsys_venv(
-    server: Server, runner_job: dict[str, _pyd.JsonValue]
+async def run_python_script_in_pytrnsys_venv(
+    server: _Server, runner_job: dict[str, _pyd.JsonValue]
 ) -> _jrpcs.Result:
     try:
         job = _mpytrnsys.RunnerJob(**runner_job)
@@ -123,37 +122,75 @@ async def run_python_in_pytrnsys_venv(
         errors = validation_error.errors()
         return _jrpcs.InvalidParams(errors)
 
-    return await _run_python_in_pytrnsys_venv(server, job)
+    return await _run_python_script_in_pytrnsys_venv(server, job)
 
 
-async def _run_python_in_pytrnsys_venv(
-    server: Server, runner_job: _mpytrnsys.RunnerJob
+async def _run_python_script_in_pytrnsys_venv(
+    server: _Server, runner_job: _mpytrnsys.RunnerJob
 ) -> _jrpcs.Result:
     object_storage_path = runner_job.object_storage_path
 
-    output_file_path = (
-        _pl.Path(__file__).parent
-        / object_storage_path.container
-        / object_storage_path.path
+    job_dir_path = _pl.Path(__file__).parents[1] / "jobs" / runner_job.id
+
+    output_file_name = object_storage_path.path.split("/")[-1]
+
+    output_file_path = job_dir_path / output_file_name
+
+    await server.swift.download(object_storage_path, output_file_path)
+
+    output_dir_path = job_dir_path / output_file_path.stem
+    output_dir_path.mkdir()
+
+    with _zip.ZipFile(output_file_path) as zip_file:
+        await _asyncio.to_thread(zip_file.extractall, output_dir_path)
+
+    script_file_path = output_dir_path / runner_job.script_to_run
+    working_dir_path = (
+        script_file_path.parent
+        if runner_job.working_dir is None
+        else output_dir_path / runner_job.working_dir
     )
 
-    loop = _asyncio.get_event_loop()
-    await loop.run_in_executor(
-        server.executor,
-        _swmp.download_storage_object,
-        object_storage_path,
-        output_file_path,
+    process = await _asyncio.create_subprocess_exec(
+        _sys.executable, script_file_path, cwd=working_dir_path
     )
 
-    result = [_secs.token_hex(nbytes=6) for _ in range(4)]
+    await process.wait()
 
-    return _jrpcs.Success(result)
+    results_dirs = await _asyncio.to_thread(
+        _get_result_paths, output_dir_path, runner_job.results_glob_pattern
+    )
+
+    if results_dirs:
+        return _jrpcs.Success(results_dirs)
+
+    return _jrpcs.Success()
+
+
+def _get_result_paths(
+    output_dir_path: _pl.Path, results_glob_pattern: str | None
+) -> _cabc.Sequence[str] | None:
+    if not results_glob_pattern:
+        return None
+
+    result_paths = [
+        p.relative_to(output_dir_path)
+        for p in output_dir_path.glob(results_glob_pattern)
+    ]
+
+    result_path_strings = [str(p) for p in result_paths]
+
+    return result_path_strings
+
+
+async def main() -> None:
+    async with _swmp.Swift(n_processes=8) as swift:
+        server = _Server(PORT, swift)
+        await server.serve()
 
 
 if __name__ == "__main__":
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
     _setup_logging()
 
-    with _cf.ProcessPoolExecutor(max_workers=8) as executor:
-        server = Server(PORT, executor)
-        _asyncio.run(server.serve())
+    _asyncio.run(main())

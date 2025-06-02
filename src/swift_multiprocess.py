@@ -25,7 +25,7 @@ class _RequestBase(_abc.ABC):
 
 @_dc.dataclass
 class _DownloadRequest(_RequestBase):
-    input_object_storage_path: _mpytrnsys.ObjectStoragePath
+    input_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath
     output_file_path: _pl.Path
 
 
@@ -77,7 +77,7 @@ class _RequestHandler:
                         _LOGGER.info("Got download request %s.", request.id)
 
                         _swift.download_storage_object(
-                            request.input_object_storage_path,
+                            request.input_object_storage_zip_path,
                             request.output_file_path,
                             connection,
                             self._shutdown_event,
@@ -104,14 +104,18 @@ class _RequestHandler:
 
 
 class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
-    def __init__(self, n_processes: int, max_queue_size: int) -> None:
-        if n_processes > max_queue_size:
+    def __init__(self, n_processes: int, max_queue_size: int | None = None) -> None:
+        actual_max_queue_size = (
+            n_processes if max_queue_size is None else max_queue_size
+        )
+
+        if n_processes > actual_max_queue_size:
             raise ValueError(
                 "The number of processes must be less than or equal to the maximum queue size."
             )
 
         self._n_processes = n_processes
-        self._max_queue_size = max_queue_size
+        self._max_queue_size = actual_max_queue_size
 
         self._request_queue: _mp.Queue[_Request | _Stop] | None = None
         self._handle_request_processes: _cabc.Sequence[_mp.Process] | None = None
@@ -164,7 +168,9 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         self._shutdown_event.set()
         self._got_response_event.set()
 
-        self._try_put_stop_no_wait(self._request_queue, "request", n_stops=self._n_processes)
+        self._try_put_stop_no_wait(
+            self._request_queue, "request", n_stops=self._n_processes
+        )
         self._try_put_stop_no_wait(self._response_queue, "response")
 
         await _asyncio.wait([self._handle_responses_task])
@@ -228,14 +234,13 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
             )
 
     async def download(
-        self, container: str, path: str, output_file_path: _pl.Path
+        self,
+        input_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath,
+        output_file_path: _pl.Path,
     ) -> None:
-        input_object_storage_path = _mpytrnsys.ObjectStoragePath(
-            container=container, path=path
-        )
         request_id = _uuid.uuid4()
         request = _DownloadRequest(
-            request_id, input_object_storage_path, output_file_path
+            request_id, input_object_storage_zip_path, output_file_path
         )
         await _asyncio.to_thread(self._put_request, request)
 

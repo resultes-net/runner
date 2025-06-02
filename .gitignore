@@ -4,3 +4,4 @@ venv3.13/
 **/__pycache__/*
 **/.mypy_cache/*
 src/runner.log*
+jobs/*
