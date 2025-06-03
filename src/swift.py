@@ -50,3 +50,17 @@ def download_storage_object(
                 return
 
             stream.write(chunk)
+
+
+def upload_storage_object(
+    input_file_path: _pl.Path,
+    object_storage_path: _mpytrnsys.ObjectStorageZipPath,
+    connection: _sclient.Connection,
+) -> None:
+    if object_storage_path.version is not None:
+        raise ValueError("Version must not be given for upload.")
+
+    with input_file_path.open("br") as contents:
+        connection.put_object(
+            object_storage_path.container, object_storage_path.path, contents
+        )

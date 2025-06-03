@@ -29,6 +29,12 @@ class _DownloadRequest(_RequestBase):
     output_file_path: _pl.Path
 
 
+@_dc.dataclass
+class _UploadRequest(_RequestBase):
+    input_file_path: _pl.Path
+    output_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath
+
+
 class _Stop:
     pass
 
@@ -93,6 +99,26 @@ class _RequestHandler:
 
                         response = _Reponse(request.id)
                         self._response_queue.put(response)
+
+                    case _UploadRequest():
+                        _LOGGER.info("Got upload request %s.", request.id)
+
+                        _swift.upload_storage_object(
+                            request.input_file_path,
+                            request.output_object_storage_zip_path,
+                            connection,
+                        )
+
+                        if self._shutdown_event.is_set():
+                            _LOGGER.info("Received shutdown event.")
+                            break
+
+                        _LOGGER.info(
+                            "Done handling request %s. Sending response.", request.id
+                        )
+
+                        response = _Reponse(request.id)
+                        self._response_queue.put(response)                        
 
                     case _Stop():
                         _LOGGER.info("Got stop request.")
@@ -241,6 +267,19 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         request_id = _uuid.uuid4()
         request = _DownloadRequest(
             request_id, input_object_storage_zip_path, output_file_path
+        )
+        await _asyncio.to_thread(self._put_request, request)
+
+        await self._wait_for_response(request_id)
+
+    async def upload(
+        self,
+        input_file_path: _pl.Path,
+        output_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath,
+    ) -> None:
+        request_id = _uuid.uuid4()
+        request = _UploadRequest(
+            request_id, input_file_path, output_object_storage_zip_path
         )
         await _asyncio.to_thread(self._put_request, request)
 

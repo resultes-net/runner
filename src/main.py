@@ -4,10 +4,10 @@ import logging as _log
 import logging.handlers as _handlers
 import os as _os
 import pathlib as _pl
+import shutil as _su
 import signal as _sig
 import sys as _sys
 import typing as _tp
-import zipfile as _zip
 
 import jsonrpcserver as _jrpcs
 import pydantic as _pyd
@@ -23,6 +23,9 @@ LOG_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
 PORT = 3000
 
 LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
+
+
+_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
 
 _shutdown_event = _asyncio.Event()
 
@@ -130,7 +133,7 @@ async def _run_python_script_in_pytrnsys_venv(
 ) -> _jrpcs.Result:
     object_storage_path = runner_job.object_storage_path
 
-    job_dir_path = _pl.Path(__file__).parents[1] / "jobs" / runner_job.id
+    job_dir_path = _JOBS_DIR_PATH / runner_job.id
 
     output_file_name = object_storage_path.path.split("/")[-1]
 
@@ -141,8 +144,7 @@ async def _run_python_script_in_pytrnsys_venv(
     output_dir_path = job_dir_path / output_file_path.stem
     output_dir_path.mkdir()
 
-    with _zip.ZipFile(output_file_path) as zip_file:
-        await _asyncio.to_thread(zip_file.extractall, output_dir_path)
+    await _asyncio.to_thread(_unzip, output_file_path, output_dir_path)
 
     script_file_path = output_dir_path / runner_job.script_to_run
     working_dir_path = (
@@ -157,14 +159,38 @@ async def _run_python_script_in_pytrnsys_venv(
 
     await process.wait()
 
+    result_file_name = f"{runner_job.id}.zip"
+    result_file_path = job_dir_path / result_file_name
+    await _asyncio.to_thread(_zip_dir, output_dir_path, result_file_path)
+
+    result_object_storage_path = _mpytrnsys.ObjectStorageZipPath(
+        container="resultes",
+        path=f"results/{result_file_name}",
+    )
+    await server.swift.upload(result_file_path, result_object_storage_path)
+
     results_dirs = await _asyncio.to_thread(
         _get_result_paths, output_dir_path, runner_job.results_glob_pattern
     )
+
+    await _asyncio.to_thread(_su.rmtree, job_dir_path)
 
     if results_dirs:
         return _jrpcs.Success(results_dirs)
 
     return _jrpcs.Success()
+
+
+def _unzip(input_file_path: _pl.Path, output_dir_path: _pl.Path) -> None:
+    _su.unpack_archive(input_file_path, output_dir_path)
+
+
+def _zip_dir(input_dir_path: _pl.Path, output_file_path: _pl.Path) -> None:
+    base_name = str(output_file_path.with_suffix(""))
+    format = output_file_path.suffix.removeprefix(".")
+    root_dir = input_dir_path
+
+    _su.make_archive(base_name, format, root_dir)
 
 
 def _get_result_paths(
@@ -192,5 +218,8 @@ async def main() -> None:
 if __name__ == "__main__":
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
     _setup_logging()
+
+    if _JOBS_DIR_PATH.exists():
+        _su.rmtree(_JOBS_DIR_PATH)
 
     _asyncio.run(main())
