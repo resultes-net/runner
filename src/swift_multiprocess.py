@@ -12,6 +12,7 @@ import queue as _queue
 import types as _tps
 import typing as _tp
 import uuid as _uuid
+import threading as _thread
 
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
@@ -58,8 +59,8 @@ LOG_FORMAT = (
 class _RequestHandler:
     def __init__(
         self,
-        request_queue: _mqueues.Queue[_Request | _Stop],
-        response_queue: _mqueues.Queue[_Reponse | _Stop],
+        request_queue: _queue.Queue[_Request | _Stop],
+        response_queue: _queue.Queue[_Reponse | _Stop],
         shutdown_event: _msync.Event,
     ) -> None:
         self._request_queue = request_queue
@@ -67,8 +68,6 @@ class _RequestHandler:
         self._shutdown_event = shutdown_event
 
     def handle_requests(self) -> None:
-        _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL)
-
         if not self._request_queue or not self._response_queue:
             raise ValueError("Swift client has not been `aentere`d yet.")
 
@@ -143,10 +142,10 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         self._n_processes = n_processes
         self._max_queue_size = actual_max_queue_size
 
-        self._request_queue: _mp.Queue[_Request | _Stop] | None = None
-        self._handle_request_processes: _cabc.Sequence[_mp.Process] | None = None
+        self._request_queue: _queue.Queue[_Request | _Stop] | None = None
+        self._handle_request_processes: _cabc.Sequence[_thread.Thread] | None = None
 
-        self._response_queue: _mp.Queue[_Reponse | _Stop] | None = None
+        self._response_queue: _queue.Queue[_Reponse | _Stop] | None = None
         self._handle_responses_task: _asyncio.Task[None] | None = None
         self._current_response: _Reponse | None = None
         self._got_response_event = _asyncio.Event()
@@ -154,8 +153,8 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         self._shutdown_event = _mp.Event()
 
     async def __aenter__(self) -> _tp.Self:
-        self._request_queue = _mp.Queue(self._max_queue_size)
-        self._response_queue = _mp.Queue(self._max_queue_size)
+        self._request_queue = _queue.Queue(self._max_queue_size)
+        self._response_queue = _queue.Queue(self._max_queue_size)
 
         self._handle_request_processes = [
             self._create_process() for _ in range(self._n_processes)
@@ -168,14 +167,14 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
 
         return self
 
-    def _create_process(self) -> _mp.Process:
+    def _create_process(self) -> _thread.Thread:
         assert self._request_queue and self._response_queue
 
         handler_process = _RequestHandler(
             self._request_queue, self._response_queue, self._shutdown_event
         )
-        process = _mp.Process(target=handler_process.handle_requests)
-        return process
+        thread = _thread.Thread(target=handler_process.handle_requests)
+        return thread
 
     async def __aexit__(
         self,
@@ -205,7 +204,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
             process.join()
 
     def _try_put_stop_no_wait[T](
-        self, queue: _mqueues.Queue[T | _Stop], queue_name: str, n_stops: int = 1
+        self, queue: _queue.Queue[T | _Stop], queue_name: str, n_stops: int = 1
     ) -> None:
         # If the queue is empty, we might have to awake processes so that they can run to termination
 
