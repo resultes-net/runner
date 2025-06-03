@@ -162,7 +162,7 @@ async def _run_python_script_in_pytrnsys_venv(
     )
 
     process = await _asyncio.create_subprocess_exec(
-        _sys.executable, script_file_path, cwd=working_dir_path
+        _sys.executable, script_file_path, cwd=working_dir_path, check=True
     )
 
     await process.wait()
@@ -183,7 +183,7 @@ async def _run_python_script_in_pytrnsys_venv(
 
     await _asyncio.to_thread(_su.rmtree, job_dir_path)
 
-    if results_dirs:
+    if results_dirs is not None:
         return _jrpcs.Success(results_dirs)
 
     return _jrpcs.Success()
