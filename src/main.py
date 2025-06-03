@@ -10,6 +10,7 @@ import sys as _sys
 import typing as _tp
 
 import jsonrpcserver as _jrpcs
+import jsonrpcserver.codes as _jrpcc
 import pydantic as _pyd
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 import websockets as _ws
@@ -135,6 +136,13 @@ async def _run_python_script_in_pytrnsys_venv(
 
     job_dir_path = _JOBS_DIR_PATH / runner_job.id
 
+    job_dir_exists = await _asyncio.to_thread(job_dir_path.exists)
+    if job_dir_exists:
+        return _jrpcs.Error(
+            code=_jrpcc.ERROR_SERVER_ERROR,
+            message=f"Have seen job ID {runner_job.id} before. Job IDs must be unique, forever.",
+        )
+
     output_file_name = object_storage_path.path.split("/")[-1]
 
     output_file_path = job_dir_path / output_file_name
@@ -142,7 +150,7 @@ async def _run_python_script_in_pytrnsys_venv(
     await server.swift.download(object_storage_path, output_file_path)
 
     output_dir_path = job_dir_path / output_file_path.stem
-    output_dir_path.mkdir()
+    await _asyncio.to_thread(output_dir_path.mkdir)
 
     await _asyncio.to_thread(_unzip, output_file_path, output_dir_path)
 
