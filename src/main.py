@@ -6,6 +6,7 @@ import os as _os
 import pathlib as _pl
 import shutil as _su
 import signal as _sig
+import subprocess as _sp
 import sys as _sys
 import typing as _tp
 
@@ -162,10 +163,27 @@ async def _run_python_script_in_pytrnsys_venv(
     )
 
     process = await _asyncio.create_subprocess_exec(
-        _sys.executable, script_file_path, cwd=working_dir_path, check=True
+        _sys.executable, script_file_path, cwd=working_dir_path, stderr=_sp.PIPE
     )
 
-    await process.wait()
+    return_code = await process.wait()
+    if return_code != 0:
+        await _asyncio.to_thread(_su.rmtree, job_dir_path)
+
+        assert process.stderr
+        stderr_bytes = await process.stderr.read()
+        stderr = stderr_bytes.decode()
+
+        _log.warning(
+            "An error ocurred running client provided script for request %s: %s",
+            runner_job.id,
+            stderr,
+        )
+
+        return _jrpcs.Error(
+            code=_jrpcc.ERROR_SERVER_ERROR,
+            message=f"Script exited with non-zero exit code: {stderr}",
+        )
 
     result_file_name = f"{runner_job.id}.zip"
     result_file_path = job_dir_path / result_file_name
