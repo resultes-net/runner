@@ -1,6 +1,6 @@
 import contextlib as _ctx
-import multiprocessing.synchronize as _msync
 import pathlib as _pl
+import threading as _thread
 import typing as _tp
 
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
@@ -27,7 +27,7 @@ def download_storage_object(
     object_storage_path: _mpytrnsys.ObjectStorageZipPath,
     output_file_path: _pl.Path,
     connection: _sclient.Connection,
-    shutdown_event: _msync.Event | None = None,
+    shutdown_event: _thread.Event | None = None,
 ) -> None:
     output_dir_path = output_file_path.parent
 

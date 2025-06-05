@@ -17,7 +17,7 @@ import resultes_pydantic_models.pytrnsys as _mpytrnsys
 import websockets as _ws
 import websockets.asyncio.server as _wsas
 
-import swift_multiprocess as _swmp
+import swift_multithreaded as _swmt
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
 
@@ -59,7 +59,7 @@ def _setup_logging() -> None:
 
 
 class _Server:
-    def __init__(self, port: int, swift: _swmp.Swift) -> None:
+    def __init__(self, port: int, swift: _swmt.Swift) -> None:
         self._port = port
         self.swift = swift
         self._tasks = set[_asyncio.Task[None]]()
@@ -236,7 +236,7 @@ def _get_result_paths(
 
 
 async def main() -> None:
-    async with _swmp.Swift(n_processes=8) as swift:
+    async with _swmt.Swift(n_threads=8) as swift:
         server = _Server(PORT, swift)
         await server.serve()
 
