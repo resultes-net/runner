@@ -21,22 +21,22 @@ LOG_FORMAT = (
 
 
 class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
-    def __init__(self, n_threads: int) -> None:
-        self._n_threads = n_threads
+    def __init__(self, executor: _cf.Executor, max_workers: int) -> None:
+        self._executor = executor
+        self._max_workers = max_workers
         self._shutdown_event = _thread.Event()
 
     async def __aenter__(self) -> _tp.Self:
         self._connections_contexts = {
-            _swift.create_connection() for _ in range(self._n_threads)
+            _swift.create_connection() for _ in range(self._max_workers)
         }
         self._free_connections = _asyncio.Queue[_sclient.Connection](
-            maxsize=self._n_threads
+            maxsize=self._max_workers
         )
         for context in self._connections_contexts:
             connection = context.__enter__()
             await self._free_connections.put(connection)
 
-        self._executor = _cf.ThreadPoolExecutor(self._n_threads)
         return self
 
     async def __aexit__(
@@ -55,7 +55,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         return False
 
     @_ctx.asynccontextmanager
-    async def _free_connection(self) -> _tp.AsyncGenerator[_sclient.Connection]:
+    async def _free_connection(self) -> _tp.AsyncIterator[_sclient.Connection]:
         connection = await self._free_connections.get()
         yield connection
         await self._free_connections.put(connection)

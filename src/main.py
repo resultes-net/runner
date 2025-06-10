@@ -1,5 +1,6 @@
 import asyncio as _asyncio
 import collections.abc as _cabc
+import concurrent.futures as _cf
 import logging as _log
 import logging.handlers as _handlers
 import os as _os
@@ -8,21 +9,21 @@ import shutil as _su
 import signal as _sig
 import subprocess as _sp
 import sys as _sys
-import typing as _tp
 
 import jsonrpcserver as _jrpcs
 import jsonrpcserver.codes as _jrpcc
 import pydantic as _pyd
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
-import websockets as _ws
-import websockets.asyncio.server as _wsas
 
+import server as _srv
 import swift_multithreaded as _swmt
 
 LOG_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
 
 
 PORT = 3000
+
+MAX_WORKERS = 8
 
 LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
 
@@ -41,10 +42,6 @@ def _on_ctrl_c(signal, stack_frame) -> None:
     _shutdown_event.set()
 
 
-class _TerminateTaskGroupException(Exception):
-    pass
-
-
 def _setup_logging() -> None:
     stream_handler = _log.StreamHandler()
 
@@ -58,68 +55,9 @@ def _setup_logging() -> None:
     _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
 
 
-class _Server:
-    def __init__(self, port: int, swift: _swmt.Swift) -> None:
-        self._port = port
-        self.swift = swift
-        self._tasks = set[_asyncio.Task[None]]()
-
-    async def _terminate_task_group(self) -> _tp.NoReturn:
-        raise _TerminateTaskGroupException()
-
-    async def _terminate_task_group_on_shutdown_event(self) -> _tp.NoReturn:
-        await _shutdown_event.wait()
-        raise _TerminateTaskGroupException()
-
-    async def _handle_connection(
-        self, server_connection: _wsas.ServerConnection
-    ) -> None:
-        _log.info("Client %s connected.", server_connection.id)
-
-        try:
-            async with _asyncio.TaskGroup() as task_group:
-                task_group.create_task(self._terminate_task_group_on_shutdown_event())
-
-                try:
-                    while not _shutdown_event.is_set():
-                        data = await server_connection.recv(decode=True)
-                        await self._handle_request(data, server_connection, task_group)
-
-                except _ws.ConnectionClosedOK:
-                    _log.info("Client %s disconnected.", server_connection.id)
-                    await task_group.create_task(self._terminate_task_group())
-
-        except* _TerminateTaskGroupException:
-            pass
-
-    def _on_task_done(self, task: _asyncio.Task[None]) -> None:
-        _log.debug("Task %s is done.", task.get_name())
-
-    async def _handle_request(
-        self,
-        data: str,
-        server_connection: _wsas.ServerConnection,
-        task_group: _asyncio.TaskGroup,
-    ) -> None:
-        coroutine = self._dispatch_request(data, server_connection)
-        task = task_group.create_task(coroutine)
-        _log.debug("Task %s has been started.", task.get_name())
-        task.add_done_callback(self._on_task_done)
-
-    async def _dispatch_request(
-        self, data: str, server_connection: _wsas.ServerConnection
-    ) -> None:
-        if result := await _jrpcs.async_dispatch(data, context=self):
-            await server_connection.send(result)
-
-    async def serve(self) -> None:
-        async with _ws.serve(self._handle_connection, port=self._port):
-            await _shutdown_event.wait()
-
-
 @_jrpcs.method()
 async def run_python_script_in_pytrnsys_venv(
-    server: _Server, runner_job: dict[str, _pyd.JsonValue]
+    server: _srv.Server, runner_job: dict[str, _pyd.JsonValue]
 ) -> _jrpcs.Result:
     try:
         job = _mpytrnsys.RunnerJob(**runner_job)
@@ -131,13 +69,15 @@ async def run_python_script_in_pytrnsys_venv(
 
 
 async def _run_python_script_in_pytrnsys_venv(
-    server: _Server, runner_job: _mpytrnsys.RunnerJob
+    server: _srv.Server, runner_job: _mpytrnsys.RunnerJob
 ) -> _jrpcs.Result:
     object_storage_path = runner_job.object_storage_path
 
     job_dir_path = _JOBS_DIR_PATH / runner_job.id
 
-    job_dir_exists = await _asyncio.to_thread(job_dir_path.exists)
+    loop = _asyncio.get_event_loop()
+
+    job_dir_exists = await loop.run_in_executor(server.executor, job_dir_path.exists)
     if job_dir_exists:
         return _jrpcs.Error(
             code=_jrpcc.ERROR_SERVER_ERROR,
@@ -151,9 +91,9 @@ async def _run_python_script_in_pytrnsys_venv(
     await server.swift.download(object_storage_path, output_file_path)
 
     output_dir_path = job_dir_path / output_file_path.stem
-    await _asyncio.to_thread(output_dir_path.mkdir)
+    await loop.run_in_executor(server.executor, output_dir_path.mkdir)
 
-    await _asyncio.to_thread(_unzip, output_file_path, output_dir_path)
+    await loop.run_in_executor(server.executor, _unzip, output_file_path, output_dir_path)
 
     script_file_path = output_dir_path / runner_job.script_to_run
     working_dir_path = (
@@ -168,7 +108,7 @@ async def _run_python_script_in_pytrnsys_venv(
 
     return_code = await process.wait()
     if return_code != 0:
-        await _asyncio.to_thread(_su.rmtree, job_dir_path)
+        await loop.run_in_executor(server.executor, _su.rmtree, job_dir_path)
 
         assert process.stderr
         stderr_bytes = await process.stderr.read()
@@ -187,7 +127,7 @@ async def _run_python_script_in_pytrnsys_venv(
 
     result_file_name = f"{runner_job.id}.zip"
     result_file_path = job_dir_path / result_file_name
-    await _asyncio.to_thread(_zip_dir, output_dir_path, result_file_path)
+    await loop.run_in_executor(server.executor, _zip_dir, output_dir_path, result_file_path)
 
     result_object_storage_path = _mpytrnsys.ObjectStorageZipPath(
         container="resultes",
@@ -195,11 +135,11 @@ async def _run_python_script_in_pytrnsys_venv(
     )
     await server.swift.upload(result_file_path, result_object_storage_path)
 
-    results_dirs = await _asyncio.to_thread(
+    results_dirs = await loop.run_in_executor(server.executor, 
         _get_result_paths, output_dir_path, runner_job.results_glob_pattern
     )
 
-    await _asyncio.to_thread(_su.rmtree, job_dir_path)
+    await loop.run_in_executor(server.executor, _su.rmtree, job_dir_path)
 
     if results_dirs is not None:
         return _jrpcs.Success(results_dirs)
@@ -236,9 +176,10 @@ def _get_result_paths(
 
 
 async def main() -> None:
-    async with _swmt.Swift(n_threads=8) as swift:
-        server = _Server(PORT, swift)
-        await server.serve()
+    with _cf.ThreadPoolExecutor(MAX_WORKERS) as executor:
+        async with _swmt.Swift(executor, MAX_WORKERS) as swift:
+            server = _srv.Server(PORT, swift, executor, _shutdown_event)
+            await server.serve()
 
 
 if __name__ == "__main__":
