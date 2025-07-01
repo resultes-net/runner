@@ -57,6 +57,7 @@ rpds-py==0.25.0
 scipy==1.15.3
 seaborn==0.13.2
 setuptools==80.9.0
+shortpath83==0.12
 six==1.17.0
 stevedore==5.4.1
 tornado==6.5

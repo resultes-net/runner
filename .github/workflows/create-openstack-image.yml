@@ -30,6 +30,7 @@ jobs:
           repositories: |
             runner
             pydantic-models
+            openstack-utils
 
       - name: Checkout repository
         uses: actions/checkout@v4

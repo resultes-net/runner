@@ -3,21 +3,24 @@ import pathlib as _pl
 import threading as _thread
 import typing as _tp
 
+import resultes_openstack_utils.clouds_yaml as _cyaml
+import resultes_openstack_utils.keystone as _ks
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 import swiftclient.client as _sclient
-
-import clouds_yaml as _cyaml
-import keystone as _ks
 
 _CHUNK_SIZE = 512 * 1024
 
 
 @_ctx.contextmanager
 def create_connection() -> _tp.Generator[_sclient.Connection]:
-    data = _cyaml.get_clouds_yaml_openstack_json()
+    clouds_yaml_file_path = _cyaml.get_clouds_yaml_file_path()
+
+    data = _cyaml.get_clouds_yaml_openstack_json(clouds_yaml_file_path)
     os_options = {"region_name": data["region_name"]}
 
-    with _ks.create_session() as session:
+    auth = _ks.create_application_credential(clouds_yaml_file_path)
+
+    with _ks.create_session(auth=auth) as session:
         connection = _sclient.Connection(session=session, os_options=os_options)
         yield connection
         connection.close()
