@@ -130,7 +130,7 @@ async def _run_python_script_in_pytrnsys_venv(
     await loop.run_in_executor(server.executor, _zip_dir, output_dir_path, result_file_path)
 
     result_object_storage_path = _mpytrnsys.ObjectStorageZipPath(
-        container="resultes",
+        container="resultes-results",
         path=f"results/{result_file_name}",
     )
     await server.swift.upload(result_file_path, result_object_storage_path)
