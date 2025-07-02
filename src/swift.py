@@ -13,7 +13,7 @@ _CHUNK_SIZE = 512 * 1024
 
 @_ctx.contextmanager
 def create_connection() -> _tp.Generator[_sclient.Connection]:
-    clouds_yaml_file_path = _cyaml.get_clouds_yaml_file_path()
+    clouds_yaml_file_path = _pl.Path(__file__).parents[1] / "config" / "clouds.yaml"
 
     data = _cyaml.get_clouds_yaml_openstack_json(clouds_yaml_file_path)
     os_options = {"region_name": data["region_name"]}
