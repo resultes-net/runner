@@ -1,6 +1,7 @@
 import asyncio as _asyncio
 import concurrent.futures as _cf
 import logging as _log
+import pathlib as _pl
 import typing as _tp
 
 import jsonrpcserver as _jrpcs
@@ -18,11 +19,13 @@ class Server:
     def __init__(
         self,
         port: int,
+        jobs_dir_path: _pl.Path,
         swift: _swmt.Swift,
         executor: _cf.Executor,
         shutdown_event: _asyncio.Event,
     ) -> None:
         self._port = port
+        self.jobs_dir_path = jobs_dir_path,
         self.swift = swift
         self.executor = executor
         self._shutdown_event = shutdown_event

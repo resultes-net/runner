@@ -10,3 +10,5 @@ pyyaml
 
 python-keystoneclient
 python-swiftclient
+
+loki-logger-handler

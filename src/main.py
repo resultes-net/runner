@@ -1,5 +1,4 @@
 import asyncio as _asyncio
-import collections.abc as _cabc
 import concurrent.futures as _cf
 import logging as _log
 import logging.handlers as _handlers
@@ -7,14 +6,13 @@ import os as _os
 import pathlib as _pl
 import shutil as _su
 import signal as _sig
-import subprocess as _sp
-import sys as _sys
 
 import jsonrpcserver as _jrpcs
-import jsonrpcserver.codes as _jrpcc
+import loki_logger_handler.loki_logger_handler as _llh
 import pydantic as _pyd
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
+import run_python_script_in_pytrnsys_venv as _rps
 import server as _srv
 import swift_multithreaded as _swmt
 
@@ -65,120 +63,41 @@ async def run_python_script_in_pytrnsys_venv(
         errors = validation_error.errors()
         return _jrpcs.InvalidParams(errors)
 
-    return await _run_python_script_in_pytrnsys_venv(server, job)
+    return await _rps.run_python_script_in_pytrnsys_venv(server, job)
 
 
-async def _run_python_script_in_pytrnsys_venv(
-    server: _srv.Server, runner_job: _mpytrnsys.RunnerJob
-) -> _jrpcs.Result:
-    object_storage_path = runner_job.object_storage_path
+@_jrpcs.method()
+async def set_loki_ip_address(loki_ip_address: str) -> _jrpcs.Result:
+    logger = _log.getLogger()
 
-    job_dir_path = _JOBS_DIR_PATH / runner_job.id
-
-    loop = _asyncio.get_event_loop()
-
-    job_dir_exists = await loop.run_in_executor(server.executor, job_dir_path.exists)
-    if job_dir_exists:
+    existing_loki_log_handlers = [
+        h for h in logger.handlers if isinstance(h, _llh.LokiLoggerHandler)
+    ]
+    if existing_loki_log_handlers:
         return _jrpcs.Error(
-            code=_jrpcc.ERROR_SERVER_ERROR,
-            message=f"Have seen job ID {runner_job.id} before. Job IDs must be unique, forever.",
+            -32000,
+            "Loki IP address already set.",
+            "The Loki IP address can only be set once.",
         )
 
-    output_file_name = object_storage_path.path.split("/")[-1]
+    url = f"{loki_ip_address}:80/loki/api/v1/push"
 
-    output_file_path = job_dir_path / output_file_name
-
-    await server.swift.download(object_storage_path, output_file_path)
-
-    output_dir_path = job_dir_path / output_file_path.stem
-    await loop.run_in_executor(server.executor, output_dir_path.mkdir)
-
-    await loop.run_in_executor(server.executor, _unzip, output_file_path, output_dir_path)
-
-    script_file_path = output_dir_path / runner_job.script_to_run
-    working_dir_path = (
-        script_file_path.parent
-        if runner_job.working_dir is None
-        else output_dir_path / runner_job.working_dir
+    loki_log_handler = _llh.LokiLoggerHandler(
+        url=url,
+        labels={"application": "Test", "environment": "Develop"},
+        label_keys={},
+        timeout=10,
     )
 
-    process = await _asyncio.create_subprocess_exec(
-        _sys.executable, script_file_path, cwd=working_dir_path, stderr=_sp.PIPE
-    )
-
-    return_code = await process.wait()
-    if return_code != 0:
-        await loop.run_in_executor(server.executor, _su.rmtree, job_dir_path)
-
-        assert process.stderr
-        stderr_bytes = await process.stderr.read()
-        stderr = stderr_bytes.decode()
-
-        _log.warning(
-            "An error ocurred running client provided script for request %s: %s",
-            runner_job.id,
-            stderr,
-        )
-
-        return _jrpcs.Error(
-            code=_jrpcc.ERROR_SERVER_ERROR,
-            message=f"Script exited with non-zero exit code: {stderr}",
-        )
-
-    result_file_name = f"{runner_job.id}.zip"
-    result_file_path = job_dir_path / result_file_name
-    await loop.run_in_executor(server.executor, _zip_dir, output_dir_path, result_file_path)
-
-    result_object_storage_path = _mpytrnsys.ObjectStorageZipPath(
-        container="resultes-results",
-        path=f"results/{result_file_name}",
-    )
-    await server.swift.upload(result_file_path, result_object_storage_path)
-
-    results_dirs = await loop.run_in_executor(server.executor, 
-        _get_result_paths, output_dir_path, runner_job.results_glob_pattern
-    )
-
-    await loop.run_in_executor(server.executor, _su.rmtree, job_dir_path)
-
-    if results_dirs is not None:
-        return _jrpcs.Success(results_dirs)
+    logger.addHandler(loki_log_handler)
 
     return _jrpcs.Success()
-
-
-def _unzip(input_file_path: _pl.Path, output_dir_path: _pl.Path) -> None:
-    _su.unpack_archive(input_file_path, output_dir_path)
-
-
-def _zip_dir(input_dir_path: _pl.Path, output_file_path: _pl.Path) -> None:
-    base_name = str(output_file_path.with_suffix(""))
-    format = output_file_path.suffix.removeprefix(".")
-    root_dir = input_dir_path
-
-    _su.make_archive(base_name, format, root_dir)
-
-
-def _get_result_paths(
-    output_dir_path: _pl.Path, results_glob_pattern: str | None
-) -> _cabc.Sequence[str] | None:
-    if not results_glob_pattern:
-        return None
-
-    result_paths = [
-        p.relative_to(output_dir_path)
-        for p in output_dir_path.glob(results_glob_pattern)
-    ]
-
-    result_path_strings = [str(p) for p in result_paths]
-
-    return result_path_strings
 
 
 async def main() -> None:
     with _cf.ThreadPoolExecutor(MAX_WORKERS) as executor:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
-            server = _srv.Server(PORT, swift, executor, _shutdown_event)
+            server = _srv.Server(PORT, _JOBS_DIR_PATH, swift, executor, _shutdown_event)
             await server.serve()
 
 
