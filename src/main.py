@@ -67,7 +67,7 @@ async def run_python_script_in_pytrnsys_venv(
 
 
 @_jrpcs.method()
-async def set_loki_ip_address(loki_ip_address: str) -> _jrpcs.Result:
+async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Result:
     logger = _log.getLogger()
 
     existing_loki_log_handlers = [
