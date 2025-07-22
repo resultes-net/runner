@@ -1,14 +1,13 @@
-import run_python_script_in_pytrnsys_venv as _rps
-import pydantic as _pyd
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
-import server as _srv
-
+import logging as _log
 
 import jsonrpcserver as _jrpcs
 import loki_logger_handler.loki_logger_handler as _llh
+import pydantic as _pyd
+import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
-
-import logging as _log
+import loki_logging as _llog
+import run_python_script_in_pytrnsys_venv as _rps
+import server as _srv
 
 
 @_jrpcs.method()
@@ -25,17 +24,11 @@ async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Re
             "The Loki IP address can only be set once.",
         )
 
-    url = f"{loki_ip_address}:80/loki/api/v1/push"
+    _llog.add_loki_log_handler(loki_ip_address, root_logger)
 
-    loki_log_handler = _llh.LokiLoggerHandler(
-        url=url,
-        additional_headers={"X-Scope-OrgID": "resultes"},
-        labels={"service_name": "runner", "ip_address": loki_ip_address},
+    root_logger.info(
+        "Loki logging handler logging to IP address %s added.", loki_ip_address
     )
-
-    root_logger.addHandler(loki_log_handler)
-
-    root_logger.info("Loki logging handler logging to IP address %s added.", loki_ip_address)
 
     return _jrpcs.Success()
 
