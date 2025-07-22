@@ -7,12 +7,10 @@ import pathlib as _pl
 import shutil as _su
 import signal as _sig
 
-import jsonrpcserver as _jrpcs
-import loki_logger_handler.loki_logger_handler as _llh
-import pydantic as _pyd
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
-import run_python_script_in_pytrnsys_venv as _rps
+# This module needs to be imported to define the JSON-RPC methods
+import jrpcs_methods as _jrpcsm  # type: ignore
+
 import server as _srv
 import swift_multithreaded as _swmt
 
@@ -51,47 +49,6 @@ def _setup_logging() -> None:
     handlers: list[_log.Handler] = [stream_handler, file_handler]
 
     _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
-
-
-@_jrpcs.method()
-async def run_python_script_in_pytrnsys_venv(
-    server: _srv.Server, runner_job: dict[str, _pyd.JsonValue]
-) -> _jrpcs.Result:
-    try:
-        job = _mpytrnsys.RunnerJob(**runner_job)
-    except _pyd.ValidationError as validation_error:
-        errors = validation_error.errors()
-        return _jrpcs.InvalidParams(errors)
-
-    return await _rps.run_python_script_in_pytrnsys_venv(server, job)
-
-
-@_jrpcs.method()
-async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Result:
-    logger = _log.getLogger()
-
-    existing_loki_log_handlers = [
-        h for h in logger.handlers if isinstance(h, _llh.LokiLoggerHandler)
-    ]
-    if existing_loki_log_handlers:
-        return _jrpcs.Error(
-            -32000,
-            "Loki IP address already set.",
-            "The Loki IP address can only be set once.",
-        )
-
-    url = f"{loki_ip_address}:80/loki/api/v1/push"
-
-    loki_log_handler = _llh.LokiLoggerHandler(
-        url=url,
-        labels={"application": "Test", "environment": "Develop"},
-        label_keys={},
-        timeout=10,
-    )
-
-    logger.addHandler(loki_log_handler)
-
-    return _jrpcs.Success()
 
 
 async def main() -> None:
