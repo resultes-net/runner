@@ -13,10 +13,10 @@ import logging as _log
 
 @_jrpcs.method()
 async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Result:
-    logger = _log.getLogger()
+    root_logger = _log.getLogger()
 
     existing_loki_log_handlers = [
-        h for h in logger.handlers if isinstance(h, _llh.LokiLoggerHandler)
+        h for h in root_logger.handlers if isinstance(h, _llh.LokiLoggerHandler)
     ]
     if existing_loki_log_handlers:
         return _jrpcs.Error(
@@ -33,7 +33,9 @@ async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Re
         labels={"service_name": "runner", "ip_address": loki_ip_address},
     )
 
-    logger.addHandler(loki_log_handler)
+    root_logger.addHandler(loki_log_handler)
+
+    root_logger.info("Loki logging handler logging to IP address %s added.", loki_ip_address)
 
     return _jrpcs.Success()
 

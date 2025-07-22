@@ -7,15 +7,12 @@ import pathlib as _pl
 import shutil as _su
 import signal as _sig
 
-
 # This module needs to be imported to define the JSON-RPC methods
 import jrpcs_methods as _jrpcsm  # type: ignore
 
+import log_config as _logc
 import server as _srv
 import swift_multithreaded as _swmt
-
-LOG_FORMAT = "%(asctime)s - %(levelname)s - %(module)s - %(message)s"
-
 
 PORT = 3000
 
@@ -48,7 +45,7 @@ def _setup_logging() -> None:
 
     handlers: list[_log.Handler] = [stream_handler, file_handler]
 
-    _log.basicConfig(format=LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
+    _log.basicConfig(format=_logc.LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
 
 
 async def main() -> None:

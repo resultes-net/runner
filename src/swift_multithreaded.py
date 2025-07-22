@@ -1,7 +1,6 @@
 import asyncio as _asyncio
 import concurrent.futures as _cf
 import contextlib as _ctx
-import logging as _log
 import pathlib as _pl
 import threading as _thread
 import types as _tps
@@ -11,13 +10,6 @@ import resultes_pydantic_models.pytrnsys as _mpytrnsys
 import swiftclient as _sclient
 
 import swift as _swift
-
-_LOGGER = _log.getLogger()
-
-LOG_LEVEL = _log.INFO
-LOG_FORMAT = (
-    "%(process)d:%(thread)d: %(asctime)s - %(levelname)s - %(module)s - %(message)s"
-)
 
 
 class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
