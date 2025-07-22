@@ -25,7 +25,7 @@ class Server:
         shutdown_event: _asyncio.Event,
     ) -> None:
         self._port = port
-        self.jobs_dir_path = jobs_dir_path,
+        self.jobs_dir_path = jobs_dir_path
         self.swift = swift
         self.executor = executor
         self._shutdown_event = shutdown_event
