@@ -8,7 +8,7 @@ import resultes_jsonrpc.jsonrpc.types as _tps
 
 @_dc.dataclass
 class FormattedRecord:
-    level: str
+    level: int
     message: str
 
     @property
@@ -19,7 +19,9 @@ class FormattedRecord:
 class JsonRpcLogHandler(_log.Handler):
     _METHOD = "post_log_message"
 
-    def __init__(self, logging_client: _rjjc.JsonRpcClient, level=_log.NOTSET) -> None:
+    def __init__(
+        self, logging_client: _rjjc.JsonRpcClient, level: int = _log.NOTSET
+    ) -> None:
         super().__init__(level)
 
         self._logging_client = logging_client
@@ -43,5 +45,5 @@ class JsonRpcLogHandler(_log.Handler):
 
     def emit(self, record: _log.LogRecord) -> None:
         message = self.format(record)
-        formatted_record = FormattedRecord(record.levelname, message)
+        formatted_record = FormattedRecord(record.levelno, message)
         self._queue.put_nowait(formatted_record)
