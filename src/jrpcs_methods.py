@@ -5,13 +5,13 @@ import loki_logger_handler.loki_logger_handler as _llh
 import pydantic as _pyd
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
-import loki_logging as _llog
+import jsonrpc_logging as _llog
 import run_python_script_in_pytrnsys_venv as _rps
-import server as _srv
+import context as _con
 
 
 @_jrpcs.method()
-async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Result:
+async def set_loki_ip_address(_: _con.Context, loki_ip_address: str) -> _jrpcs.Result:
     root_logger = _log.getLogger()
 
     existing_loki_log_handlers = [
@@ -35,7 +35,7 @@ async def set_loki_ip_address(_: _srv.Server, loki_ip_address: str) -> _jrpcs.Re
 
 @_jrpcs.method()
 async def run_python_script_in_pytrnsys_venv(
-    server: _srv.Server, runner_job: dict[str, _pyd.JsonValue]
+    server: _con.Context, runner_job: dict[str, _pyd.JsonValue]
 ) -> _jrpcs.Result:
     try:
         job = _mpytrnsys.RunnerJob(**runner_job)

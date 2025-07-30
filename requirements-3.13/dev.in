@@ -4,3 +4,4 @@
 
 -e file:pydantic-models
 -e file:openstack-utils
+-e file:jsonrpc

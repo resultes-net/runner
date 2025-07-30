@@ -31,6 +31,7 @@ jobs:
             runner
             pydantic-models
             openstack-utils
+            jsonrpc
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -177,7 +178,7 @@ jobs:
 
       - name: Copy sources folder to server
         run: |
-          ./scripts/scp -r ../requirements-3.13 ../src ../pydantic-models ../openstack-utils ../config resultes
+          ./scripts/scp -r ../requirements-3.13 ../src ../pydantic-models ../openstack-utils ../jsonrpc ../config resultes
 
       - name: Create venv on server
         run: |

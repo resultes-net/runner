@@ -4,3 +4,4 @@
 
 file:pydantic-models
 file:openstack-utils
+file:jsonrpc

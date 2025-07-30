@@ -10,7 +10,7 @@ import jsonrpcserver as _jrpcs
 import jsonrpcserver.codes as _jrpcc
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
-import server as _srv
+import context as _con
 
 
 def _unzip(input_file_path: _pl.Path, output_dir_path: _pl.Path) -> None:
@@ -42,7 +42,7 @@ def _get_result_paths(
 
 
 async def run_python_script_in_pytrnsys_venv(
-    server: _srv.Server, runner_job: _mpytrnsys.RunnerJob
+    server: _con.Context, runner_job: _mpytrnsys.RunnerJob
 ) -> _jrpcs.Result:
     object_storage_path = runner_job.object_storage_path
 
