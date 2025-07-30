@@ -1,36 +1,12 @@
 import logging as _log
 
 import jsonrpcserver as _jrpcs
-import loki_logger_handler.loki_logger_handler as _llh
 import pydantic as _pyd
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
+import context as _con
 import jsonrpc_logging as _llog
 import run_python_script_in_pytrnsys_venv as _rps
-import context as _con
-
-
-@_jrpcs.method()
-async def set_loki_ip_address(_: _con.Context, loki_ip_address: str) -> _jrpcs.Result:
-    root_logger = _log.getLogger()
-
-    existing_loki_log_handlers = [
-        h for h in root_logger.handlers if isinstance(h, _llh.LokiLoggerHandler)
-    ]
-    if existing_loki_log_handlers:
-        return _jrpcs.Error(
-            -32000,
-            "Loki IP address already set.",
-            "The Loki IP address can only be set once.",
-        )
-
-    _llog.add_loki_log_handler(loki_ip_address, root_logger)
-
-    root_logger.info(
-        "Loki logging handler logging to IP address %s added.", loki_ip_address
-    )
-
-    return _jrpcs.Success()
 
 
 @_jrpcs.method()
