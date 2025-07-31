@@ -5,6 +5,8 @@ import logging as _log
 import resultes_jsonrpc.jsonrpc.client as _rjjc
 import resultes_jsonrpc.jsonrpc.types as _tps
 
+_LOGGER = _log.getLogger(__name__)
+
 
 @_dc.dataclass
 class FormattedRecord:
@@ -30,9 +32,12 @@ class JsonRpcLogHandler(_log.Handler):
         self._queue = _asyncio.Queue[FormattedRecord]()
 
     async def start(self) -> None:
+        _LOGGER.info("Starting.")
+
         try:
             while True:
                 formatted_record = await self._queue.get()
+
                 params = formatted_record.json
                 await self._logging_client.send_notification(
                     self._METHOD, params=params

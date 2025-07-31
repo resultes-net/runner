@@ -1,22 +1,22 @@
 import asyncio as _asyncio
+import collections.abc as _cabc
 import concurrent.futures as _cf
-import dataclasses as _dc
 import logging as _log
 import logging.handlers as _handlers
 import os as _os
 import pathlib as _pl
 import shutil as _su
 import signal as _sig
-import typing as _tp
 
-import resultes_jsonrpc.jsonrpc.client as _rjjc
-import resultes_jsonrpc.jsonrpc.server as _rjjs
 import resultes_jsonrpc.websockets.server as _rjws
 
-# This module needs to be imported to define the JSON-RPC methods
-import jsonrpc_logging as _jrpcl
-import log_config as _logc
 import context as _con
+
+# This module needs to be imported to define the JSON-RPC methods
+import jrpcs_methods as _jrpcm
+
+import log_config as _logc
+import message_receiver_factories as _facs
 import swift_multithreaded as _swmt
 
 PORT = 3000
@@ -27,6 +27,44 @@ LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
 
 
 _JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
+
+
+_shutdown_event = _asyncio.Event()
+
+
+def _on_ctrl_c(signal, stack_frame) -> None:
+    if _shutdown_event.is_set():
+        _log.info("Received Ctrl-C second time: raising keyboard interrupt.")
+        raise KeyboardInterrupt()
+
+    _log.info("Received Ctrl-C first time.")
+    _shutdown_event.set()
+
+
+async def main() -> None:
+    with _cf.ThreadPoolExecutor(MAX_WORKERS) as executor:
+        async with _swmt.Swift(executor, MAX_WORKERS) as swift:
+            context = _con.Context(_JOBS_DIR_PATH, swift, executor)
+
+            logging_messages_receiver_factory = (
+                _facs.LoggingMessageReceiverSingletonFactory()
+            )
+
+            async with _facs.RequestReceiverSingletonFactory(
+                context
+            ) as request_receiver_factory, logging_messages_receiver_factory.run():
+                message_receiver_factories: _cabc.Mapping[
+                    str, _rjws.MessageReceiverFactory
+                ] = {
+                    "/requests": request_receiver_factory,
+                    "/logging": logging_messages_receiver_factory,
+                }
+
+                server = _rjws.Server(PORT, message_receiver_factories)
+
+                async with server.serve():
+                    await _shutdown_event.wait()
+                    request_receiver_factory.cancel_requests()
 
 
 def _setup_logging() -> None:
@@ -42,113 +80,10 @@ def _setup_logging() -> None:
     _log.basicConfig(format=_logc.LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
 
 
-_was_ctrl_c_seen_before = False
-_websocket_server: _rjws.Server
-
-
-def _on_ctrl_c(signal, stack_frame) -> None:
-    global _was_ctrl_c_seen_before
-
-    if _was_ctrl_c_seen_before:
-        _log.info("Received Ctrl-C second time: raising keyboard interrupt.")
-        raise KeyboardInterrupt()
-
-    _log.info("Received Ctrl-C first time.")
-    _was_ctrl_c_seen_before = True
-
-    if _websocket_server:
-        _websocket_server.stop()
-
-
-class _Stoppable(_tp.Protocol):
-    def stop(self) -> None: ...
-
-
-@_dc.dataclass
-class _StoppableWithTask:
-    stoppable: _Stoppable
-    task: _asyncio.Task[None]
-
-    async def stop(self) -> None:
-        self.stoppable.stop()
-        await self.task
-
-
-async def main() -> None:
-    global _websocket_server
-
-    paths = ["/requests", "/logging"]
-    async with _rjws.Server.start(PORT, paths) as websocket_server:
-        async with _rjjs.TaskSpawningDispatcher() as dispatcher:
-            with _cf.ThreadPoolExecutor(MAX_WORKERS) as executor:
-                async with _swmt.Swift(executor, MAX_WORKERS) as swift:
-                    context = _con.Context(_JOBS_DIR_PATH, swift, executor)
-
-                    _websocket_server = websocket_server
-
-                    requests_server: _StoppableWithTask | None = None
-                    logging_client: _StoppableWithTask | None = None
-                    logging_handler: _StoppableWithTask | None = None
-
-                    try:
-                        async for websocket in websocket_server.websockets():
-
-                            if websocket.path == "/requests":
-                                if requests_server:
-                                    raise RuntimeError(
-                                        "Requests are already connected."
-                                    )
-
-                                jsonrpc_server = _rjjs.JsonRpcServer(
-                                    websocket.websocket,
-                                    dispatcher,
-                                    message_dispatch_context=context,
-                                )
-                                coroutine = jsonrpc_server.start()
-                                task = _asyncio.create_task(coroutine)
-                                requests_server = _StoppableWithTask(
-                                    jsonrpc_server, task
-                                )
-
-                            elif websocket.path == "/logging":
-                                if logging_client:
-                                    raise RuntimeError("Logging is already connected.")
-
-                                jsonrpc_client = _rjjc.JsonRpcClient(
-                                    websocket.websocket
-                                )
-                                coroutine = jsonrpc_client.start()
-                                task = _asyncio.create_task(coroutine)
-                                logging_client = _StoppableWithTask(
-                                    jsonrpc_client, task
-                                )
-
-                                jsonrcp_log_handler = _jrpcl.JsonRpcLogHandler(
-                                    jsonrpc_client, _log.INFO
-                                )
-
-                                root_logger = _log.getLogger()
-                                root_logger.addHandler(jsonrcp_log_handler)
-
-                                coroutine = jsonrcp_log_handler.start()
-                                task = _asyncio.create_task(coroutine)
-                                logging_handler = _StoppableWithTask(
-                                    jsonrcp_log_handler, task
-                                )
-
-                    finally:
-
-                        if requests_server:
-                            await requests_server.stop()
-
-                        if logging_client:
-                            await logging_client.stop()
-
-                        if logging_handler:
-                            await logging_handler.stop()
-
-
 if __name__ == "__main__":
+    # Make sure import of `jrpcm` is not "organized" away by VS Code
+    _jrpcm.dummy()
+
     _setup_logging()
 
     _sig.signal(_sig.SIGINT, _on_ctrl_c)

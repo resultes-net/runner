@@ -42,15 +42,15 @@ def _get_result_paths(
 
 
 async def run_python_script_in_pytrnsys_venv(
-    server: _con.Context, runner_job: _mpytrnsys.RunnerJob
+    context: _con.Context, runner_job: _mpytrnsys.RunnerJob
 ) -> _jrpcs.Result:
     object_storage_path = runner_job.object_storage_path
 
-    jobs_dir_path = server.jobs_dir_path / runner_job.id
+    jobs_dir_path = context.jobs_dir_path / runner_job.id
 
     loop = _asyncio.get_event_loop()
 
-    job_dir_exists = await loop.run_in_executor(server.executor, jobs_dir_path.exists)
+    job_dir_exists = await loop.run_in_executor(context.executor, jobs_dir_path.exists)
     if job_dir_exists:
         return _jrpcs.Error(
             code=_jrpcc.ERROR_SERVER_ERROR,
@@ -61,13 +61,13 @@ async def run_python_script_in_pytrnsys_venv(
 
     output_file_path = jobs_dir_path / output_file_name
 
-    await server.swift.download(object_storage_path, output_file_path)
+    await context.swift.download(object_storage_path, output_file_path)
 
     output_dir_path = jobs_dir_path / output_file_path.stem
-    await loop.run_in_executor(server.executor, output_dir_path.mkdir)
+    await loop.run_in_executor(context.executor, output_dir_path.mkdir)
 
     await loop.run_in_executor(
-        server.executor, _unzip, output_file_path, output_dir_path
+        context.executor, _unzip, output_file_path, output_dir_path
     )
 
     script_file_path = output_dir_path / runner_job.script_to_run
@@ -83,7 +83,7 @@ async def run_python_script_in_pytrnsys_venv(
 
     return_code = await process.wait()
     if return_code != 0:
-        await loop.run_in_executor(server.executor, _su.rmtree, jobs_dir_path)
+        await loop.run_in_executor(context.executor, _su.rmtree, jobs_dir_path)
 
         assert process.stderr
         stderr_bytes = await process.stderr.read()
@@ -103,23 +103,23 @@ async def run_python_script_in_pytrnsys_venv(
     result_file_name = f"{runner_job.id}.zip"
     result_file_path = jobs_dir_path / result_file_name
     await loop.run_in_executor(
-        server.executor, _zip_dir, output_dir_path, result_file_path
+        context.executor, _zip_dir, output_dir_path, result_file_path
     )
 
     result_object_storage_path = _mpytrnsys.ObjectStorageZipPath(
         container="resultes-results",
         path=f"results/{result_file_name}",
     )
-    await server.swift.upload(result_file_path, result_object_storage_path)
+    await context.swift.upload(result_file_path, result_object_storage_path)
 
     results_dirs = await loop.run_in_executor(
-        server.executor,
+        context.executor,
         _get_result_paths,
         output_dir_path,
         runner_job.results_glob_pattern,
     )
 
-    await loop.run_in_executor(server.executor, _su.rmtree, jobs_dir_path)
+    await loop.run_in_executor(context.executor, _su.rmtree, jobs_dir_path)
 
     if results_dirs is not None:
         return _jrpcs.Success(results_dirs)
