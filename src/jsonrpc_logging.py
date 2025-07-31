@@ -29,7 +29,9 @@ class JsonRpcLogHandler(_log.Handler):
         self._logging_client = logging_client
 
         self._task: _asyncio.Task[None] | None = None
+
         self._queue = _asyncio.Queue[FormattedRecord]()
+        self._is_queue_shut_down = False
 
     async def start(self) -> None:
         _LOGGER.info("Starting.")
@@ -49,6 +51,13 @@ class JsonRpcLogHandler(_log.Handler):
         self._queue.shutdown()
 
     def emit(self, record: _log.LogRecord) -> None:
+        if self._is_queue_shut_down:
+            return
+
         message = self.format(record)
         formatted_record = FormattedRecord(record.levelno, message)
-        self._queue.put_nowait(formatted_record)
+
+        try:
+            self._queue.put_nowait(formatted_record)
+        except _asyncio.QueueShutDown:
+            self._is_queue_shut_down = True

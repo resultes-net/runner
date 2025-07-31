@@ -50,7 +50,7 @@ async def main() -> None:
 
             async with _facs.RequestReceiverSingletonFactory(
                 context
-            ) as request_receiver_factory, logging_messages_receiver_factory.run():
+            ) as request_receiver_factory:
                 message_receiver_factories: _cabc.Mapping[
                     str, _rjws.MessageReceiverFactory
                 ] = {
@@ -60,7 +60,7 @@ async def main() -> None:
 
                 server = _rjws.Server(PORT, message_receiver_factories)
 
-                async with server.run():
+                async with server.run(), logging_messages_receiver_factory.run():
                     await _shutdown_event.wait()
                     request_receiver_factory.cancel_requests()
 
