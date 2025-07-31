@@ -44,7 +44,7 @@ async def main() -> None:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
             context = _con.Context(_JOBS_DIR_PATH, swift, executor)
 
-            logging_messages_receiver_factory = (
+            logging_message_receiver_factory = (
                 _facs.LoggingMessageReceiverSingletonFactory()
             )
 
@@ -55,12 +55,12 @@ async def main() -> None:
                     str, _rjws.MessageReceiverFactory
                 ] = {
                     "/requests": request_receiver_factory,
-                    "/logging": logging_messages_receiver_factory,
+                    "/logging": logging_message_receiver_factory,
                 }
 
                 server = _rjws.Server(PORT, message_receiver_factories)
 
-                async with server.run(), logging_messages_receiver_factory.run():
+                async with server.run(), logging_message_receiver_factory.run():
                     await _shutdown_event.wait()
                     request_receiver_factory.cancel_requests()
 
