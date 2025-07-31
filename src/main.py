@@ -11,10 +11,8 @@ import signal as _sig
 import resultes_jsonrpc.websockets.server as _rjws
 
 import context as _con
-
 # This module needs to be imported to define the JSON-RPC methods
 import jrpcs_methods as _jrpcm
-
 import log_config as _logc
 import message_receiver_factories as _facs
 import swift_multithreaded as _swmt
@@ -62,7 +60,7 @@ async def main() -> None:
 
                 server = _rjws.Server(PORT, message_receiver_factories)
 
-                async with server.serve():
+                async with server.run():
                     await _shutdown_event.wait()
                     request_receiver_factory.cancel_requests()
 
