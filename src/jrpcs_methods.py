@@ -1,8 +1,8 @@
-import json as _json
 import logging as _log
 
 import jsonrpcserver as _jrpcs
 import pydantic as _pyd
+import resultes_jsonrpc.jsonrpc.types as _rjjt
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
 import context as _con
@@ -15,11 +15,10 @@ def dummy() -> None:
 
 @_jrpcs.method()
 async def run_python_script_in_pytrnsys_venv(
-    context: _con.Context, data: str
+    context: _con.Context, runner_job: _rjjt.JsonStructured
 ) -> _jrpcs.Result:
     try:
-        json = _json.loads(data)
-        job = _mpytrnsys.RunnerJob(**json)
+        job = _mpytrnsys.RunnerJob(**runner_job)
     except _pyd.ValidationError as validation_error:
         errors = validation_error.errors()
         return _jrpcs.InvalidParams(errors)

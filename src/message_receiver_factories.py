@@ -13,6 +13,8 @@ import context as _con
 import jsonrpc_logging as _jrpcl
 import log_config as _logc
 
+_LOGGER = _log.getLogger(__name__)
+
 
 class RequestReceiverSingletonFactory(
     _ctx.AbstractAsyncContextManager["RequestReceiverSingletonFactory"]
@@ -58,7 +60,7 @@ class LoggingMessageReceiverSingletonFactory:
             raise RuntimeError("Logging already connected.")
 
         logging_client = _rjjc.JsonRpcClient(write_websocket)
-        log_handler = self._create_and_configure_log_handler(logging_client)
+        log_handler = self._setup_and_get_log_handler(logging_client)
 
         self._payload = _LoggingFactoryPayload(logging_client, log_handler)
         self._payload_created_event.set()
@@ -66,12 +68,14 @@ class LoggingMessageReceiverSingletonFactory:
         return self._payload.client
 
     @staticmethod
-    def _create_and_configure_log_handler(
+    def _setup_and_get_log_handler(
         jsonrpc_client: _rjjc.JsonRpcClient,
     ) -> _jrpcl.JsonRpcLogHandler:
         jsonrcp_log_handler = _jrpcl.JsonRpcLogHandler(jsonrpc_client, _log.INFO)
         formatter = _log.Formatter(_logc.LOG_FORMAT)
         jsonrcp_log_handler.setFormatter(formatter)
+        root_logger = _log.getLogger()
+        root_logger.addHandler(jsonrcp_log_handler)
         return jsonrcp_log_handler
 
     @_ctx.asynccontextmanager
@@ -86,5 +90,7 @@ class LoggingMessageReceiverSingletonFactory:
 
         if not self._payload:
             return
+
+        _LOGGER.info("Starting log handler.")
 
         await self._payload.log_handler.start()
