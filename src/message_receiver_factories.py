@@ -18,7 +18,7 @@ _LOGGER = _log.getLogger(__name__)
 class RequestReceiverSingletonFactory:
     def __init__(self, context: _con.Context) -> None:
         self._context = context
-        self._dispatcher = _rjjs.Dispatcher()
+        self._dispatcher = _rjjs.AsyncTaskSpawningDispatcher()
         self._requests_server: _rjjs.JsonRpcServer | None = None
 
     def __call__(self, write_websocket: _rjwt.WriteWebsocket) -> _rjwt.MessageReceiver:
