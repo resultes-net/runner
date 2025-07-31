@@ -1,6 +1,7 @@
 import asyncio as _asyncio
 import dataclasses as _dc
 import logging as _log
+import typing as _tp
 
 import resultes_jsonrpc.jsonrpc.client as _rjjc
 import resultes_jsonrpc.jsonrpc.types as _tps
@@ -28,13 +29,15 @@ class JsonRpcLogHandler(_log.Handler):
 
         self._logging_client = logging_client
 
-        self._task: _asyncio.Task[None] | None = None
-
         self._queue = _asyncio.Queue[FormattedRecord]()
         self._is_queue_shut_down = False
 
+        self._sender_task: _asyncio.Task[_tp.Any] | None = None
+
     async def start(self) -> None:
         _LOGGER.info("Starting.")
+
+        self._sender_task = _asyncio.current_task()
 
         try:
             while True:
@@ -52,6 +55,15 @@ class JsonRpcLogHandler(_log.Handler):
 
     def emit(self, record: _log.LogRecord) -> None:
         if self._is_queue_shut_down:
+            return
+
+        # Make sure sending of log messages doesn't trigger other log messages - ad infinitum
+        current_task = _asyncio.current_task()
+        if (
+            current_task is not None
+            and self._sender_task is not None
+            and current_task == self._sender_task
+        ):
             return
 
         message = self.format(record)

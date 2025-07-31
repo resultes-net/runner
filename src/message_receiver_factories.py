@@ -3,7 +3,6 @@ import collections.abc as _cabc
 import contextlib as _ctx
 import dataclasses as _dc
 import logging as _log
-import typing as _tp
 
 import resultes_jsonrpc.jsonrpc.client as _rjjc
 import resultes_jsonrpc.jsonrpc.server as _rjjs
@@ -16,12 +15,10 @@ import log_config as _logc
 _LOGGER = _log.getLogger(__name__)
 
 
-class RequestReceiverSingletonFactory(
-    _ctx.AbstractAsyncContextManager["RequestReceiverSingletonFactory"]
-):
+class RequestReceiverSingletonFactory:
     def __init__(self, context: _con.Context) -> None:
         self._context = context
-        self._dispatcher = _rjjs.TaskSpawningDispatcher()
+        self._dispatcher = _rjjs.Dispatcher()
         self._requests_server: _rjjs.JsonRpcServer | None = None
 
     def __call__(self, write_websocket: _rjwt.WriteWebsocket) -> _rjwt.MessageReceiver:
@@ -33,15 +30,11 @@ class RequestReceiverSingletonFactory(
         )
         return self._requests_server
 
-    async def __aenter__(self) -> _tp.Self:
-        await self._dispatcher.__aenter__()
-        return self
+    async def cancel_and_join_requests(self) -> None:
+        if not self._requests_server:
+            return
 
-    async def __aexit__(self, exc_type, exc_value, traceback) -> bool | None:
-        return await self._dispatcher.__aexit__(exc_type, exc_value, traceback)
-
-    def cancel_requests(self) -> None:
-        self._dispatcher.cancel_tasks()
+        await self._requests_server.cancel_and_join_requests()
 
 
 @_dc.dataclass

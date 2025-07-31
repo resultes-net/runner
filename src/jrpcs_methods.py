@@ -2,6 +2,7 @@ import logging as _log
 
 import jsonrpcserver as _jrpcs
 import pydantic as _pyd
+import resultes_jsonrpc.jsonrpc.server as _rjjs
 import resultes_jsonrpc.jsonrpc.types as _rjjt
 import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
@@ -9,11 +10,12 @@ import context as _con
 import run_python_script_in_pytrnsys_venv as _rps
 
 
-def dummy() -> None:
+# Make sure import of `jrpcm` is not "organized" away by VS Code
+def configure() -> None:
     pass
 
 
-@_jrpcs.method()
+@_rjjs.cancellable_jrpcs_method
 async def run_python_script_in_pytrnsys_venv(
     context: _con.Context, runner_job: _rjjt.JsonStructured
 ) -> _jrpcs.Result:

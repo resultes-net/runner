@@ -12,6 +12,8 @@ import resultes_pydantic_models.pytrnsys as _mpytrnsys
 
 import context as _con
 
+_LOGGER = _log.getLogger(__name__)
+
 
 def _unzip(input_file_path: _pl.Path, output_dir_path: _pl.Path) -> None:
     _su.unpack_archive(input_file_path, output_dir_path)
@@ -44,6 +46,8 @@ def _get_result_paths(
 async def run_python_script_in_pytrnsys_venv(
     context: _con.Context, runner_job: _mpytrnsys.RunnerJob
 ) -> _jrpcs.Result:
+    _LOGGER.info("Running job %s.", runner_job.id)
+
     object_storage_path = runner_job.object_storage_path
 
     jobs_dir_path = context.jobs_dir_path / runner_job.id

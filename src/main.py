@@ -48,21 +48,20 @@ async def main() -> None:
                 _facs.LoggingMessageReceiverSingletonFactory()
             )
 
-            async with _facs.RequestReceiverSingletonFactory(
-                context
-            ) as request_receiver_factory:
-                message_receiver_factories: _cabc.Mapping[
-                    str, _rjws.MessageReceiverFactory
-                ] = {
-                    "/requests": request_receiver_factory,
-                    "/logging": logging_message_receiver_factory,
-                }
+            request_receiver_factory = _facs.RequestReceiverSingletonFactory(context)
 
-                server = _rjws.Server(PORT, message_receiver_factories)
+            message_receiver_factories: _cabc.Mapping[
+                str, _rjws.MessageReceiverFactory
+            ] = {
+                "/requests": request_receiver_factory,
+                "/logging": logging_message_receiver_factory,
+            }
 
-                async with server.run(), logging_message_receiver_factory.run():
-                    await _shutdown_event.wait()
-                    request_receiver_factory.cancel_requests()
+            server = _rjws.Server(PORT, message_receiver_factories)
+
+            async with server.run(), logging_message_receiver_factory.run():
+                await _shutdown_event.wait()
+                await request_receiver_factory.cancel_and_join_requests()
 
 
 def _setup_logging() -> None:
@@ -79,8 +78,7 @@ def _setup_logging() -> None:
 
 
 if __name__ == "__main__":
-    # Make sure import of `jrpcm` is not "organized" away by VS Code
-    _jrpcm.dummy()
+    _jrpcm.configure()
 
     _setup_logging()
 
