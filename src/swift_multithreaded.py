@@ -6,7 +6,7 @@ import threading as _thread
 import types as _tps
 import typing as _tp
 
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
+import resultes_pydantic_models.runner as _mrunner
 import swiftclient as _sclient
 
 import swift as _swift
@@ -54,7 +54,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
 
     async def download(
         self,
-        input_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath,
+        input_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
         output_file_path: _pl.Path,
     ) -> None:
         await self._run_in_executor_with_connection(
@@ -65,7 +65,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
 
     def _download(
         self,
-        input_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath,
+        input_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
         output_file_path: _pl.Path,
         connection: _sclient.Connection,
     ) -> None:
@@ -79,7 +79,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
     async def upload(
         self,
         input_file_path: _pl.Path,
-        output_object_storage_zip_path: _mpytrnsys.ObjectStorageZipPath,
+        output_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
     ) -> None:
         await self._run_in_executor_with_connection(
             _swift.upload_storage_object,

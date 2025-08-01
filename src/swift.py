@@ -5,7 +5,7 @@ import typing as _tp
 
 import resultes_openstack_utils.clouds_yaml as _cyaml
 import resultes_openstack_utils.keystone as _ks
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
+import resultes_pydantic_models.runner as _mrunner
 import swiftclient.client as _sclient
 
 _CHUNK_SIZE = 512 * 1024
@@ -27,7 +27,7 @@ def create_connection() -> _tp.Generator[_sclient.Connection]:
 
 
 def download_storage_object(
-    object_storage_path: _mpytrnsys.ObjectStorageZipPath,
+    object_storage_path: _mrunner.ObjectStorageZipPath,
     output_file_path: _pl.Path,
     connection: _sclient.Connection,
     shutdown_event: _thread.Event | None = None,
@@ -57,7 +57,7 @@ def download_storage_object(
 
 def upload_storage_object(
     input_file_path: _pl.Path,
-    object_storage_path: _mpytrnsys.ObjectStorageZipPath,
+    object_storage_path: _mrunner.ObjectStorageZipPath,
     connection: _sclient.Connection,
 ) -> None:
     if object_storage_path.version is not None:

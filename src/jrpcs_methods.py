@@ -4,7 +4,7 @@ import jsonrpcserver as _jrpcs
 import pydantic as _pyd
 import resultes_jsonrpc.jsonrpc.server as _rjjs
 import resultes_jsonrpc.jsonrpc.types as _rjjt
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
+import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
 import run_python_script_in_pytrnsys_venv as _rps
@@ -20,7 +20,7 @@ async def run_python_script_in_pytrnsys_venv(
     context: _con.Context, runner_job: _rjjt.JsonStructured
 ) -> _jrpcs.Result:
     try:
-        job = _mpytrnsys.RunnerJob(**runner_job)
+        job = _mrunner.RunnerJob(**runner_job)
     except _pyd.ValidationError as validation_error:
         errors = validation_error.errors()
         return _jrpcs.InvalidParams(errors)

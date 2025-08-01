@@ -5,7 +5,7 @@ import pathlib as _pl
 import uuid as _uuid
 
 import pytest as _pt
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
+import resultes_pydantic_models.runner as _mrunner
 
 import log_config as _logc
 import swift_multithreaded as _swmt
@@ -34,7 +34,7 @@ async def test_download(n_tasks: int, n_threads: int, timeout: float) -> None:
 
 
 async def download_trnsys(swift: _swmt.Swift) -> None:
-    object_storage_zip_path = _mpytrnsys.ObjectStorageZipPath(
+    object_storage_zip_path = _mrunner.ObjectStorageZipPath(
         container="resultes", path="build-runner-image/TRNSYS18_resultes.zip"
     )
     uuid = _uuid.uuid4()

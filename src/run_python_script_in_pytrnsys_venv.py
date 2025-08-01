@@ -8,7 +8,7 @@ import sys as _sys
 
 import jsonrpcserver as _jrpcs
 import jsonrpcserver.codes as _jrpcc
-import resultes_pydantic_models.pytrnsys as _mpytrnsys
+import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
 
@@ -44,7 +44,7 @@ def _get_result_paths(
 
 
 async def run_python_script_in_pytrnsys_venv(
-    context: _con.Context, runner_job: _mpytrnsys.RunnerJob
+    context: _con.Context, runner_job: _mrunner.RunnerJob
 ) -> _jrpcs.Result:
     _LOGGER.info("Running job %s.", runner_job.id)
 
@@ -110,7 +110,7 @@ async def run_python_script_in_pytrnsys_venv(
         context.executor, _zip_dir, output_dir_path, result_file_path
     )
 
-    result_object_storage_path = _mpytrnsys.ObjectStorageZipPath(
+    result_object_storage_path = _mrunner.ObjectStorageZipPath(
         container="resultes-results",
         path=f"results/{result_file_name}",
     )
