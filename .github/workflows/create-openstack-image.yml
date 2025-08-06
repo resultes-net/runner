@@ -115,6 +115,7 @@ jobs:
             | jq -r '.volumes_attached|.[0]|.id' \
           )
           echo "BUILD_IMAGE_SERVER_VOLUME_ID=$BUILD_IMAGE_SERVER_VOLUME_ID" >> "$GITHUB_ENV"
+          echo "Attached volume ID: $BUILD_IMAGE_SERVER_VOLUME_ID"
 
       - name: Set up ssh agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -240,12 +241,12 @@ jobs:
 
       - name: Build image from server
         run: |
-          ./scripts/os server image create build-image-server
+          ./scripts/os image create --volume $BUILD_IMAGE_SERVER_VOLUME_ID --disk-format qcow2 build-image-server-image
           
           status=""
           while [ -z "$status" ] || [ "$status" != "active" ]
           do
-            status=$(./scripts/os image show build-image-server --format=value --column status)
+            status=$(./scripts/os image show build-image-server-image --format=value --column status)
             sleep 5
           done
 
