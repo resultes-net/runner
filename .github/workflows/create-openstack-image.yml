@@ -84,14 +84,14 @@ jobs:
         run: |
           set +e
           ip_address=""
-          for i in $(seq 1 10)
+          for i in $(seq 1 20)
           do
             ip_address=$(./scripts/os server show build-image-server -fjson -caddresses | jq -r '.addresses."ext-net1"|.[0]')
             if [ $? -eq 0 ] && [ "$ip_address" != "null" ]
             then
               break
             fi
-            echo "Timeed out retrieving IP address, sleeping for 15 seconds..."
+            echo "Timed out retrieving IP address, sleeping for 15 seconds..."
             sleep 15
           done
           set -e
