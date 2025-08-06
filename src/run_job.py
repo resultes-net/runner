@@ -4,7 +4,6 @@ import logging as _log
 import pathlib as _pl
 import shutil as _su
 import subprocess as _sp
-import sys as _sys
 
 import jsonrpcserver as _jrpcs
 import jsonrpcserver.codes as _jrpcc
@@ -43,7 +42,7 @@ def _get_result_paths(
     return result_path_strings
 
 
-async def run_python_script_in_pytrnsys_venv(
+async def run_job(
     context: _con.Context, runner_job: _mrunner.RunnerJob
 ) -> _jrpcs.Result:
     _LOGGER.info("Running job %s.", runner_job.id)
@@ -74,15 +73,14 @@ async def run_python_script_in_pytrnsys_venv(
         context.executor, _unzip, output_file_path, output_dir_path
     )
 
-    script_file_path = output_dir_path / runner_job.script_to_run
     working_dir_path = (
-        script_file_path.parent
+        runner_job.program.parent
         if runner_job.working_dir is None
         else output_dir_path / runner_job.working_dir
     )
 
     process = await _asyncio.create_subprocess_exec(
-        _sys.executable, script_file_path, cwd=working_dir_path, stderr=_sp.PIPE
+        runner_job.program, *runner_job.args, cwd=working_dir_path, stderr=_sp.PIPE
     )
 
     return_code = await process.wait()
@@ -93,15 +91,15 @@ async def run_python_script_in_pytrnsys_venv(
         stderr_bytes = await process.stderr.read()
         stderr = stderr_bytes.decode()
 
-        _log.warning(
-            "An error ocurred running client provided script for request %s: %s",
+        _LOGGER.warning(
+            "An error ocurred running job %s: %s",
             runner_job.id,
             stderr,
         )
 
         return _jrpcs.Error(
             code=_jrpcc.ERROR_SERVER_ERROR,
-            message=f"Script exited with non-zero exit code: {stderr}",
+            message=f"Job program exited with non-zero exit code: {stderr}",
         )
 
     result_file_name = f"{runner_job.id}.zip"

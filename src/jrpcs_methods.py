@@ -7,7 +7,7 @@ import resultes_jsonrpc.jsonrpc.types as _rjjt
 import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
-import run_python_script_in_pytrnsys_venv as _rps
+import run_job as _rj
 
 
 # Make sure import of `jrpcm` is not "organized" away by VS Code
@@ -16,7 +16,7 @@ def configure() -> None:
 
 
 @_rjjs.cancellable_jrpcs_method
-async def run_python_script_in_pytrnsys_venv(
+async def run_job(
     context: _con.Context, runner_job: _rjjt.JsonStructured
 ) -> _jrpcs.Result:
     try:
@@ -27,4 +27,4 @@ async def run_python_script_in_pytrnsys_venv(
 
     _log.info("Running runner job %s.", job.id)
 
-    return await _rps.run_python_script_in_pytrnsys_venv(context, job)
+    return await _rj.run_job(context, job)

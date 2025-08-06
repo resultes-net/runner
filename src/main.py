@@ -7,10 +7,12 @@ import os as _os
 import pathlib as _pl
 import shutil as _su
 import signal as _sig
+import sys as _sys
 
 import resultes_jsonrpc.websockets.server as _rjws
 
 import context as _con
+
 # This module needs to be imported to define the JSON-RPC methods
 import jrpcs_methods as _jrpcm
 import log_config as _logc
@@ -25,6 +27,8 @@ LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
 
 
 _JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
+
+_LOGGER = _log.getLogger(__name__)
 
 
 _shutdown_event = _asyncio.Event()
@@ -83,6 +87,8 @@ if __name__ == "__main__":
     _setup_logging()
 
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
+
+    _LOGGER.info("Python executable is at %s.", _sys.executable)
 
     if _JOBS_DIR_PATH.exists():
         _su.rmtree(_JOBS_DIR_PATH)
