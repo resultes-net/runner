@@ -77,7 +77,7 @@ jobs:
 
       - name: Spin up machine
         run: |
-          ./scripts/os server create --image "Windows Server 2025 Datacenter SSH" --flavor "a8-ram16-disk50-perf1" \
+          ./scripts/os server create --image "Windows Server 2025 Datacenter SSH Image" --flavor "a8-ram16-disk50-perf1" \
             --key-name build_keypair --network ext-net1 build-image-server
 
       - name: Get IP address
