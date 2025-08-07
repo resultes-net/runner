@@ -53,6 +53,10 @@ jobs:
           venv-linux/bin/python -m pip install --upgrade wheel pip uv
           venv-linux/bin/python -m uv pip install -r requirements-linux/build.txt
 
+      - name: List OpenStack SDK version
+        run: |
+          ./scripts/os --version
+
       - name: List OpenStack projects
         run: |
           ./scripts/os project list
@@ -231,24 +235,24 @@ jobs:
                 -OutFile 'resultes\TRNSYS18_resultes.zip' \
             '; $ProgressPreference="Continue";'
 
-      - name: Unzip TRNSYS to C:\ on server
-        run: |
-          ./scripts/ssh Expand-Archive -Path 'resultes\TRNSYS18_resultes.zip' -DestinationPath 'C:\\'
+      # - name: Unzip TRNSYS to C:\ on server
+      #   run: |
+      #     ./scripts/ssh Expand-Archive -Path 'resultes\TRNSYS18_resultes.zip' -DestinationPath 'C:\\'
 
-      - name: Shutdown server
-        run: |
-          ./scripts/ssh 'shutdown /s'
+      # - name: Shutdown server
+      #   run: |
+      #     ./scripts/ssh 'shutdown /s'
 
-      - name: Build image from server
-        run: |
-          ./scripts/os image create --volume $BUILD_IMAGE_SERVER_VOLUME_ID --disk-format qcow2 build-image-server-image
+      # - name: Build image from server
+      #   run: |
+      #     ./scripts/os image create --volume $BUILD_IMAGE_SERVER_VOLUME_ID --disk-format qcow2 build-image-server-image
           
-          status=""
-          while [ -z "$status" ] || [ "$status" != "active" ]
-          do
-            status=$(./scripts/os image show build-image-server-image --format=value --column status)
-            sleep 5
-          done
+      #     status=""
+      #     while [ -z "$status" ] || [ "$status" != "active" ]
+      #     do
+      #       status=$(./scripts/os image show build-image-server-image --format=value --column status)
+      #       sleep 5
+      #     done
 
       # - name: Delete server
       #   run: |
