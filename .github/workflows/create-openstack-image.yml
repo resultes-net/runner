@@ -250,10 +250,10 @@ jobs:
             sleep 5
           done
 
-      - name: Delete server
-        run: |
-          ./scripts/os server delete build-image-server
-        if: ${{ always() }}
+      # - name: Delete server
+      #   run: |
+      #     ./scripts/os server delete build-image-server
+      #   if: ${{ always() }}
 
       - name: Delete key pair
         run: |
