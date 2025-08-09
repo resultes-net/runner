@@ -74,15 +74,15 @@ jobs:
           New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
 
       - name: Download stand-alone python
+        working-directory: E:\
         run: |
-          E:\
           $ProgressPreference="SilentlyContinue"
           Invoke-WebRequest https://github.com/astral-sh/python-build-standalone/releases/download/20250808/cpython-3.12.11+20250808-x86_64-pc-windows-msvc-install_only.tar.gz -OutFile python.tar.gz
           $ProgressPreference="Continue"
 
       - name: Extract python
+        working-directory: E:\
         run: |
-          E:\
           tar -xz -f python.tar.gz
 
       - name: Copy source files
@@ -95,8 +95,8 @@ jobs:
           cp -R ..\config E:
 
       - name: Install requirements
+        working-directory: E:\
         run: |
-          E:\
           .\python\python.exe -m pip install --upgrade wheel pip uv
           .\python\python.exe -m uv pip install -r .\requirements-3.13\run.txt
 
