@@ -81,9 +81,12 @@ jobs:
           $ProgressPreference="Continue"
 
       - name: Extract python
-        working-directory: E:\
         run: |
           tar -xz -f python.tar.gz
+
+      - name: Move python folder to 'E:''
+        run: |
+          mv python E:\
 
       - name: Copy source files
         run: |
@@ -93,6 +96,10 @@ jobs:
           cp -R ..\openstack-utils E:
           cp -R ..\jsonrpc E:
           cp -R ..\config E:
+
+      - name: List contents of 'E:'
+        run: |
+          ls E:\
 
       - name: Install requirements
         working-directory: E:\
