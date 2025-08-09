@@ -58,11 +58,11 @@ jobs:
 
       - name: Create new partition
         run: |
-           New-Partition -DiskNumber 1 -UseMaximumSize
+           New-Partition -DiskNumber 2 -UseMaximumSize
 
       - name: Set drive letter
         run: |
-          Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter E
+          Set-Partition -DiskNumber 2 -PartitionNumber 2 -NewDriveLetter E
 
       - name: Format volume
         run: |
