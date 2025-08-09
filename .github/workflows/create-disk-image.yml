@@ -71,7 +71,7 @@ jobs:
       - name: Download Python
         run: |
           $ProgressPreference="SilentlyContinue"
-          wget https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe -O python-installer.exe
+          Invoke-WebRequest https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe -O python-installer.exe
           $ProgressPreference="Continue"
 
       - name: Install Python
