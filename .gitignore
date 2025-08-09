@@ -1,4 +1,5 @@
 venv3.13/
+venv2/
 .idea/
 .vscode/
 **/__pycache__/*

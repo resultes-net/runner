@@ -69,13 +69,21 @@ jobs:
         run: |
           Format-Volume -DriveLetter E
 
-      - name: Show installed python versions
-        run: |
-          py --list-paths
-
       - name: Enable long paths
         run: |
           New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+
+      - name: Download stand-alone python
+        working-directory: E:\
+        run: |
+          $ProgressPreference="SilentlyContinue"
+          Inovke-WebRequest https://github.com/astral-sh/python-build-standalone/releases/download/20250808/cpython-3.12.11+20250808-x86_64-pc-windows-msvc-install_only.tar.gz -O python.tar.gz
+          $ProgressPreference="Continue"
+
+      - name: Extract python
+        working-directory: E:\
+        run: |
+          tar -xz -f python.tar.gz
 
       - name: Copy source files
         run: |
@@ -86,15 +94,11 @@ jobs:
           cp -R ..\jsonrpc E:
           cp -R ..\config E:
 
-      - name: Create venv
-        run: |
-          py -3.13 -m venv E:\venv3.13
-
       - name: Install requirements
         working-directory: E:\
         run: |
-          .\venv3.13\Scripts\python.exe -m pip install --upgrade wheel pip uv
-          .\venv3.13\Scripts\python.exe -m uv pip install -r .\requirements-3.13\run.txt
+          .\python\python.exe -m pip install --upgrade wheel pip uv
+          .\python\python.exe -m uv pip install -r .\requirements-3.13\run.txt
 
       - name: Unmount disk image file
         run: |
