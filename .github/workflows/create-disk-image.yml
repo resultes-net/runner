@@ -99,8 +99,8 @@ jobs:
       - name: Install requirements
         working-directory: E:\
         run:
-          .\venv3.13\python.exe -m pip install --upgrade wheel pip uv
-          .\venv3.13\python.exe -m uv pip install -r .\requirements\build.txt
+          .\venv3.13\Scripts\python.exe -m pip install --upgrade wheel pip uv
+          .\venv3.13\Scripts\python.exe -m uv pip install -r .\requirements\build.txt
 
       - name: Unmount disk image file
         run: |
