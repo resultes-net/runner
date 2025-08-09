@@ -98,4 +98,4 @@ jobs:
 
       - name: Unmount disk image file
         run: |
-          Mount-DiskImage -ImagePath $PWD\image.vhdx
+          Unmount-DiskImage -ImagePath $PWD\image.vhdx
