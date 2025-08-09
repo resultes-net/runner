@@ -10,7 +10,7 @@ jobs:
   build:
     concurrency: build-image-runner_serialized
     
-    runs-on: ubuntu-24.04
+    runs-on: windows-2025
     
     defaults:
       run:
@@ -78,7 +78,7 @@ jobs:
       - name: Spin up machine
         run: |
           ./scripts/os server create --image "Windows Server 2025 Datacenter SSH Image" --flavor "a8-ram16-disk50-perf1" \
-            --key-name build_keypair --network ext-net1 build-image-server
+            --key-name build_keypair --network ext-net1 --block-device config/block-device-mapping.json build-image-server
 
       - name: Get IP address
         run: |
@@ -108,14 +108,6 @@ jobs:
             echo "SSH_LOCATION=$SSH_LOCATION" >> "$GITHUB_ENV"
           fi
 
-      - name: Get volume ID
-        run: |
-          BUILD_IMAGE_SERVER_VOLUME_ID=$( \
-            ./scripts/os server show build-image-server --format=json --column=volumes_attached \
-            | jq -r '.volumes_attached|.[0]|.id' \
-          )
-          echo "BUILD_IMAGE_SERVER_VOLUME_ID=$BUILD_IMAGE_SERVER_VOLUME_ID" >> "$GITHUB_ENV"
-
       - name: Set up ssh agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -143,9 +135,21 @@ jobs:
             echo "Connected successfully."
           fi
 
+      - name: Initialize disk
+        run: |
+          ./scripts/ssh  Initialize-Disk -Number 1
+          
+      - name: Create partition
+        run: |
+          ./scripts/ssh New-Partition -DiskNumber 1 -UseMaximumSize | Format-Volume -FileSystem NTFS
+          
+      - name: Set drive letter
+        run: |
+          ./scripts/ssh Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter D
+
       - name: Create `resultes` folder
         run: |
-          ./scripts/ssh mkdir resultes
+          ./scripts/ssh mkdir 'D:\resultes'
 
       - name: Download Python onto server
         run: |
@@ -158,7 +162,7 @@ jobs:
 
       - name: Install Python on server
         run: |
-          ssh "$SSH_LOCATION" 'Start-Process -Wait .\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet'
+          ssh "$SSH_LOCATION" 'Start-Process -Wait D:\resultes\python-3.13.3-amd64.exe -ArgumentList /quiet InstallAllUsers=1 TargetDir=D:\Python'
 
       - name: Enable long paths on server
         run: |
@@ -240,7 +244,7 @@ jobs:
 
       - name: Build image from server
         run: |
-          ./scripts/os server image create build-image-server
+          ./scripts/os server image create --name "Runner Snapshot" build-image-server
           
           status=""
           while [ -z "$status" ] || [ "$status" != "active" ]

@@ -1,0 +1,104 @@
+name: Build runner image
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    concurrency: build-image-runner_serialized
+    
+    runs-on: windows-2025
+    
+    defaults:
+      run:
+        working-directory: create-disk-image
+
+    env:
+      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
+      BUILD_KEYPAIR_PRIVATE_KEY: ${{ secrets.BUILD_KEYPAIR_PRIVATE_KEY }}
+
+    steps:
+      - name: Generate app token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.READ_RESULTES_REPOS_APP_ID }}
+          private-key: ${{ secrets.READ_RESULTES_REPOS_APP_KEY }}
+          repositories: |
+            runner
+            pydantic-models
+            openstack-utils
+            jsonrpc
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+          submodules: 'true'
+
+      - name: Create disk image file
+        run: |
+          New-Vhd -Path image.vhdx -SizeBytes 1GB
+          
+      - name: Mount disk image file
+        run: |
+          Mount-DiskImage -ImagePath $PWD\image.vhdx
+
+      - name: Show disks
+        run: |
+          Get-Disk
+
+      - name: Initialize disk
+        run: |
+          Initialize-Disk -Number 1
+
+      - name: Create new partition
+        run: |
+           New-Partition -DiskNumber 1 -UseMaximumSize
+
+      - name: Set drive letter
+        run: |
+          Set-Partition -DiskNumber 1 -PartitionNumber 2 -NewDriveLetter E
+
+      - name: Format volume
+        run: |
+          Format-Volume -DriveLetter Z
+
+      - name: Download Python
+        run: |
+          $ProgressPreference="SilentlyContinue"
+          wget https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe -O python-installer.exe
+          $ProgressPreference="Continue"
+
+      - name: Install Python
+        run: |
+          .\python-installer.exe -ArgumentList /quiet
+
+      - name: Enable long paths
+        run: |
+          New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+
+      - name: Copy source files
+        run: |
+          cp -R ..\requirements-3.13 E:
+          cp -R ..\src E:
+          cp -R ..\pydantic-models E:
+          cp -R ..\openstack-utils E:
+          cp -R ..\jsonrpc E:
+          cp -R ..\config E:
+
+      - name: Create venv
+        run: |
+          py -3.13 -m venv E:\venv3.13
+
+      - name: Install requirements
+        working-directory: E:\
+        run:
+          .\venv3.13\venv\python.exe -m pip install --upgrade wheel pip uv
+          .\venv3.13\venv\python.exe -m uv pip install -r .\requirements\build.txt
+
+
