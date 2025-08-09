@@ -77,7 +77,7 @@ jobs:
         working-directory: E:\
         run: |
           $ProgressPreference="SilentlyContinue"
-          Invoke-WebRequest https://github.com/astral-sh/python-build-standalone/releases/download/20250808/cpython-3.12.11+20250808-x86_64-pc-windows-msvc-install_only.tar.gz -O python.tar.gz
+          Invoke-WebRequest https://github.com/astral-sh/python-build-standalone/releases/download/20250808/cpython-3.12.11+20250808-x86_64-pc-windows-msvc-install_only.tar.gz -OutFile python.tar.gz
           $ProgressPreference="Continue"
 
       - name: Extract python
