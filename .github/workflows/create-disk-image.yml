@@ -98,7 +98,7 @@ jobs:
 
       - name: Install requirements
         working-directory: E:\
-        run:
+        run: |
           .\venv3.13\Scripts\python.exe -m pip install --upgrade wheel pip uv
           .\venv3.13\Scripts\python.exe -m uv pip install -r .\requirements\build.txt
 
