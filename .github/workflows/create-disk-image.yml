@@ -69,15 +69,15 @@ jobs:
         run: |
           Format-Volume -DriveLetter E
 
-      - name: Download Python
-        run: |
-          $ProgressPreference="SilentlyContinue"
-          Invoke-WebRequest https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe -OutFile python-installer.exe
-          $ProgressPreference="Continue"
+      # - name: Download Python
+      #   run: |
+      #     $ProgressPreference="SilentlyContinue"
+      #     Invoke-WebRequest https://www.python.org/ftp/python/3.13.6/python-3.13.6-amd64.exe -OutFile python-installer.exe
+      #     $ProgressPreference="Continue"
 
-      - name: Install Python
-        run: |
-          .\python-installer.exe -ArgumentList /quiet
+      # - name: Install Python
+      #   run: |
+      #     .\python-installer.exe -ArgumentList /quiet
 
       - name: Enable long paths
         run: |
