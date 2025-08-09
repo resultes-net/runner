@@ -54,7 +54,7 @@ jobs:
 
       - name: Initialize disk
         run: |
-          Initialize-Disk -Number 1
+          Initialize-Disk -Number 2
 
       - name: Create new partition
         run: |
