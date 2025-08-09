@@ -3,7 +3,7 @@ name: Build runner image
 on:
   push:
     branches:
-      - main
+      - ignore
   workflow_dispatch:
 
 jobs:
