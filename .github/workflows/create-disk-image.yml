@@ -144,4 +144,4 @@ jobs:
 
       - name: Upload image
         run: |
-          .\scripts\os.ps1 image create --file image.vhdx --disk-format qcow2 --id 4a4dfc90-da8e-4189-bbc2-d711db91fd3e runner-disk-image
+          .\scripts\os.ps1 image create --file image.vhdx --disk-format qcow2 runner-disk-image
