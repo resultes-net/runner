@@ -44,7 +44,7 @@ jobs:
 
       - name: Create disk image file
         run: |
-          New-Vhd -Path image.vhdx -SizeBytes 1GB
+          New-Vhd -Path image.vhdx -SizeBytes 2GB
           
       - name: Mount disk image file
         run: |
@@ -99,7 +99,9 @@ jobs:
       - name: Download stand-alone python
         run: |
           $ProgressPreference="SilentlyContinue"
-          Invoke-WebRequest https://github.com/astral-sh/python-build-standalone/releases/download/20250808/cpython-3.12.11+20250808-x86_64-pc-windows-msvc-install_only.tar.gz -OutFile python.tar.gz
+          Invoke-WebRequest `
+            https://github.com/astral-sh/python-build-standalone/releases/download/20250808/cpython-3.12.11+20250808-x86_64-pc-windows-msvc-install_only.tar.gz `
+            -OutFile python.tar.gz
           $ProgressPreference="Continue"
 
       - name: Extract python
@@ -132,3 +134,14 @@ jobs:
       - name: Unmount disk image file
         run: |
           Dismount-DiskImage -ImagePath $PWD\image.vhdx
+
+      - name: Create venv
+        run: |
+            py -3.12 -m venv venv
+            .\venv\Scripts\python.exe -m pip install --upgrade wheel pip uv
+            .\venv\Scripts\python.exe -m uv pip sync .\requirements\build.txt
+
+
+      - name: Upload image
+        run: |
+          .\scripts\os.ps1 image create --file image.vhdx --disk-format qcow2 --id 4a4dfc90-da8e-4189-bbc2-d711db91fd3e runner-disk-image
