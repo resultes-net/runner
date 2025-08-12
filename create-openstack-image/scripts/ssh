@@ -1,5 +1,0 @@
-#!/bin/env  bash
-
-. scripts/ssh.source-me
-
-ssh $SSH_ARGS "$SSH_LOCATION" "$*"

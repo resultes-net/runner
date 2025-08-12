@@ -1,0 +1,7 @@
+{
+    "uuid": "de1f3ba3-4f3c-4254-823b-8ffd6a94f5d9",
+    "source_type": "image",
+    "destination_type": "volume",
+    "volume_size": 2,
+    "delete_on_termination": true
+}

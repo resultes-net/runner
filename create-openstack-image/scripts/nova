@@ -1,7 +1,0 @@
-#!/bin/env bash
-
-. scripts/os.source-me
-
-. config/PCU-4GXOPDF-openrc.txt
-
-OS_AUTH_TOKEN="" "$VENV"/bin/nova "$@"

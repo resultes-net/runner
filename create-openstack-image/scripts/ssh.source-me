@@ -1,1 +1,0 @@
-SSH_ARGS="-o ControlPath=~/.ssh/master-build_image_server -o ControlMaster=auto -o ControlPersist=600"

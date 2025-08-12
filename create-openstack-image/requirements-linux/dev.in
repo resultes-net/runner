@@ -1,6 +1,0 @@
--r build.in
-
-python-novaclient
-awscli
-
-pip-compile-multi

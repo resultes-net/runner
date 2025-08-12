@@ -1,8 +1,0 @@
-#!/bin/env  bash
-
-. scripts/ssh.source-me
-
-sources="${*:1:$#-1}"
-target="${*:$#}"
-
-scp $SSH_ARGS $sources "$SSH_LOCATION:$target"

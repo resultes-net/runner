@@ -70,9 +70,13 @@ jobs:
         run: |
           Format-Volume -DriveLetter E
 
+      - name: Copy start script
+        run: |
+          cp .\contents\start.ps1 E:\
+          
       - name: Extract TRNSYS
         run: |
-          Expand-Archive -Path .\TRNSYS18_resultes.zip
+          Expand-Archive -Path .\contents\TRNSYS18_resultes.zip
 
       - name: Move TRNSYS to 'E:'
         run: |

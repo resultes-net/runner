@@ -7,7 +7,6 @@ import os as _os
 import pathlib as _pl
 import shutil as _su
 import signal as _sig
-import sys as _sys
 
 import resultes_jsonrpc.websockets.server as _rjws
 
@@ -24,8 +23,14 @@ MAX_WORKERS = 8
 
 LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
 
+DEFAULT_LOG_FILE_PATH = _pl.Path(__file__).parent / "runner.log"
 
-_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
+LOG_FILE_PATH = _pl.Path(_os.environ.get("LOG_FILE_PATH", DEFAULT_LOG_FILE_PATH))
+
+
+DEFAULT_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
+
+JOBS_DIR_PATH = _pl.Path(_os.environ.get("JOBS_DIR_PATH", DEFAULT_JOBS_DIR_PATH))
 
 _LOGGER = _log.getLogger(__name__)
 
@@ -38,14 +43,17 @@ def _on_ctrl_c(signal, stack_frame) -> None:
         _log.info("Received Ctrl-C second time: raising keyboard interrupt.")
         raise KeyboardInterrupt()
 
-    _log.info("Received Ctrl-C first time.")
+    _LOGGER.info("Received Ctrl-C first time.")
     _shutdown_event.set()
 
 
 async def main() -> None:
+    _LOGGER.info("Log file path: %s", LOG_FILE_PATH)
+    _LOGGER.info("Jobs dir path: %s", JOBS_DIR_PATH)
+
     with _cf.ThreadPoolExecutor(MAX_WORKERS) as executor:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
-            context = _con.Context(_JOBS_DIR_PATH, swift, executor)
+            context = _con.Context(JOBS_DIR_PATH, swift, executor)
 
             logging_message_receiver_factory = (
                 _facs.LoggingMessageReceiverSingletonFactory()
@@ -70,9 +78,8 @@ async def main() -> None:
 def _setup_logging() -> None:
     stream_handler = _log.StreamHandler()
 
-    log_file_path = _pl.Path(__file__).parent / "runner.log"
     file_handler = _handlers.RotatingFileHandler(
-        log_file_path, maxBytes=5 * 1024 * 1024, backupCount=10
+        LOG_FILE_PATH, maxBytes=5 * 1024 * 1024, backupCount=10
     )
 
     handlers: list[_log.Handler] = [stream_handler, file_handler]
@@ -87,7 +94,7 @@ if __name__ == "__main__":
 
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
 
-    if _JOBS_DIR_PATH.exists():
-        _su.rmtree(_JOBS_DIR_PATH)
+    if JOBS_DIR_PATH.exists():
+        _su.rmtree(JOBS_DIR_PATH)
 
     _asyncio.run(main())
