@@ -144,4 +144,4 @@ jobs:
 
       - name: Upload image
         run: |
-          .\scripts\os.ps1 volume create --file image.vhdx --disk-format vhdx runner-disk-image
+          .\scripts\os.ps1 image create --file image.vhdx --disk-format vhdx runner-disk-image
