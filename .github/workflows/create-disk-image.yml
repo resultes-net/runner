@@ -76,7 +76,7 @@ jobs:
 
       - name: Move TRNSYS to 'E:'
         run: |
-          mv TRNSYS18 E:\
+          mv .\TRNSYS18_resultes\TRNSYS18 E:\
 
       - name: Download NSSM
         run: |
