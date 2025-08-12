@@ -69,6 +69,28 @@ jobs:
         run: |
           Format-Volume -DriveLetter E
 
+      - name: Extract TRNSYS
+        run: |
+          Expand-Archive -Path .\TRNSYS18_resultes.zip
+
+      - name: Move TRNSYS to 'E:'
+        run: |
+          mv TRNSYS18 E:\
+
+      - name: Download NSSM
+        run: |
+            $ProgressPreference="SilentlyContinue"
+            Invoke-WebRequest -Uri https://nssm.cc/release/nssm-2.24.zip -OutFile nssm-2.24.zip
+            $ProgressPreference="Continue"
+
+      - name: Unzip NSSM
+        run: |
+          Expand-Archive -Path nssm-2.24.zip
+
+      - name: Move NSSM folder to 'E:'
+        run: |
+          mv nssm-2.24 E:\
+
       - name: Enable long paths
         run: |
           New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
@@ -83,7 +105,7 @@ jobs:
         run: |
           tar -xz -f python.tar.gz
 
-      - name: Move python folder to 'E:''
+      - name: Move python folder to 'E:'
         run: |
           mv python E:\
 
