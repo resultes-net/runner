@@ -1,3 +1,5 @@
 -r build.in
 
 pip-compile-multi
+
+python-novaclient
