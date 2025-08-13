@@ -5,11 +5,14 @@ import pathlib as _pl
 import threading as _thread
 import types as _tps
 import typing as _tp
+import logging as _log
 
 import resultes_pydantic_models.runner as _mrunner
 import swiftclient as _sclient
 
 import swift as _swift
+
+_LOGGER = _log.getLogger(__name__)
 
 
 class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
@@ -57,11 +60,15 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         input_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
         output_file_path: _pl.Path,
     ) -> None:
+        _LOGGER.info("Downloading %s to %s...", input_object_storage_zip_path, output_file_path)
+
         await self._run_in_executor_with_connection(
             self._download,
             input_object_storage_zip_path,
             output_file_path,
         )
+
+        _LOGGER.info("Done.")
 
     def _download(
         self,
@@ -81,11 +88,16 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
         input_file_path: _pl.Path,
         output_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
     ) -> None:
+        _LOGGER.info("Uploading %s to %s...", input_file_path, output_object_storage_zip_path)
+
         await self._run_in_executor_with_connection(
             _swift.upload_storage_object,
             input_file_path,
             output_object_storage_zip_path,
         )
+
+        _LOGGER.info("Done.")
+
 
     async def _run_in_executor_with_connection[*S, T](
         self,
