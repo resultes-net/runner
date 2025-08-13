@@ -79,7 +79,7 @@ async def run_job(
         else output_dir_path / runner_job.working_dir
     )
 
-    _LOGGER.info("Running %s in subprocess...", run_job)
+    _LOGGER.info("Running %s in subprocess...", runner_job)
 
     process = await _asyncio.create_subprocess_exec(
         runner_job.program, *runner_job.args, cwd=working_dir_path, stderr=_sp.PIPE
