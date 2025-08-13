@@ -7,6 +7,7 @@ import os as _os
 import pathlib as _pl
 import shutil as _su
 import signal as _sig
+import typing as _tp
 
 import resultes_jsonrpc.websockets.server as _rjws
 
@@ -37,6 +38,14 @@ JOBS_DIR_PATH = _pl.Path(_os.environ.get("JOBS_DIR_PATH", DEFAULT_JOBS_DIR_PATH)
 _LOGGER = _log.getLogger(__name__)
 
 
+class _CancelTaskGroupException(Exception):
+    pass
+
+
+async def _cancel_task_group() -> _tp.NoReturn:
+    raise _CancelTaskGroupException()
+
+
 _shutdown_event = _asyncio.Event()
 
 
@@ -55,26 +64,33 @@ async def main() -> None:
 
     with _cf.ThreadPoolExecutor(N_THREADS) as executor:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
-            context = _con.Context(JOBS_DIR_PATH, swift, executor)
+            try:
+                async with _asyncio.TaskGroup() as task_group:
+                    context = _con.Context(JOBS_DIR_PATH, swift, executor)
 
-            logging_message_receiver_factory = (
-                _facs.LoggingMessageReceiverSingletonFactory(executor)
-            )
+                    logging_message_receiver_factory = (
+                        _facs.LoggingMessageReceiverSingletonFactory(executor)
+                    )
 
-            request_receiver_factory = _facs.RequestReceiverSingletonFactory(context)
+                    request_receiver_factory = _facs.RequestReceiverSingletonFactory(
+                        task_group, context
+                    )
 
-            message_receiver_factories: _cabc.Mapping[
-                str, _rjws.MessageReceiverFactory
-            ] = {
-                "/requests": request_receiver_factory,
-                "/logging": logging_message_receiver_factory,
-            }
+                    message_receiver_factories: _cabc.Mapping[
+                        str, _rjws.MessageReceiverFactory
+                    ] = {
+                        "/requests": request_receiver_factory,
+                        "/logging": logging_message_receiver_factory,
+                    }
 
-            server = _rjws.Server(PORT, message_receiver_factories)
+                    server = _rjws.Server(PORT, message_receiver_factories)
 
-            async with server.run(), logging_message_receiver_factory.run():
-                await _shutdown_event.wait()
-                await request_receiver_factory.cancel_and_join_requests()
+                    async with server.run(), logging_message_receiver_factory.run():
+                        await _shutdown_event.wait()
+                        await task_group.create_task(_cancel_task_group())
+
+            except* _CancelTaskGroupException:
+                pass
 
 
 def _setup_logging() -> None:

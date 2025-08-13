@@ -17,9 +17,9 @@ _LOGGER = _log.getLogger(__name__)
 
 
 class RequestReceiverSingletonFactory:
-    def __init__(self, context: _con.Context) -> None:
+    def __init__(self, task_group: _asyncio.TaskGroup, context: _con.Context) -> None:
         self._context = context
-        self._dispatcher = _rjjs.AsyncTaskSpawningDispatcher()
+        self._dispatcher = _rjjs.AsyncTaskSpawningDispatcher(task_group)
         self._requests_server: _rjjs.JsonRpcServer | None = None
 
     def __call__(self, write_websocket: _rjwt.WriteWebsocket) -> _rjwt.MessageReceiver:
@@ -30,12 +30,6 @@ class RequestReceiverSingletonFactory:
             write_websocket, self._dispatcher, self._context
         )
         return self._requests_server
-
-    async def cancel_and_join_requests(self) -> None:
-        if not self._requests_server:
-            return
-
-        await self._requests_server.cancel_and_join_requests()
 
 
 @_dc.dataclass

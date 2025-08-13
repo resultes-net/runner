@@ -15,7 +15,7 @@ def configure() -> None:
     pass
 
 
-@_rjjs.cancellable_jrpcs_method
+@_rjjs.cancellable_async_jrpcs_method
 async def run_job(
     context: _con.Context, runner_job: _rjjt.JsonStructured
 ) -> _jrpcs.Result:
