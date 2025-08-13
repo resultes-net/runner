@@ -112,25 +112,25 @@ jobs:
         run: |
           tar -xz -f python.tar.gz
 
-      - name: Move python folder to 'E:'
+      - name: Move python folder to 'E:\runner'
         run: |
-          mv python E:\
+          mv python E:\runner
 
       - name: Copy source files
         run: |
-          cp -R ..\requirements-3.13 E:
-          cp -R ..\src E:
-          cp -R ..\pydantic-models E:
-          cp -R ..\openstack-utils E:
-          cp -R ..\jsonrpc E:
-          cp -R ..\config E:
+          cp -R ..\requirements-3.13 E:\runner
+          cp -R ..\src E:\runner
+          cp -R ..\pydantic-models E:\runner
+          cp -R ..\openstack-utils E:\runner
+          cp -R ..\jsonrpc E:\runner
+          cp -R ..\config E:\runner
 
-      - name: List contents of 'E:'
+      - name: List contents of 'E:\runner'
         run: |
-          ls E:\
+          ls E:\runner\
 
       - name: Install requirements
-        working-directory: E:\
+        working-directory: E:\runner\
         run: |
           .\python\python.exe -m pip install --upgrade wheel pip uv
           .\python\python.exe -m uv pip install -r .\requirements-3.13\run.txt
