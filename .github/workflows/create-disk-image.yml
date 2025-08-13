@@ -96,6 +96,10 @@ jobs:
         run: |
           mv nssm-2.24 E:\
 
+      - name: Create runner folder
+        run: |
+          mkdir E:\runner    
+
       - name: Enable long paths
         run: |
           New-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
