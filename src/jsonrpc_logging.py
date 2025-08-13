@@ -58,13 +58,18 @@ class JsonRpcLogHandler(_log.Handler):
             return
 
         # Make sure sending of log messages doesn't trigger other log messages - ad infinitum
-        current_task = _asyncio.current_task()
-        if (
-            current_task is not None
-            and self._sender_task is not None
-            and current_task == self._sender_task
-        ):
-            return
+        try:
+            event_loop = _asyncio.get_running_loop()
+        except RuntimeError:
+            event_loop = None
+        if event_loop:
+            current_task = _asyncio.current_task(event_loop)
+            if (
+                current_task is not None
+                and self._sender_task is not None
+                and current_task == self._sender_task
+            ):
+                return
 
         message = self.format(record)
         formatted_record = FormattedRecord(record.levelno, message)
