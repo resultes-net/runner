@@ -79,11 +79,16 @@ async def run_job(
         else output_dir_path / runner_job.working_dir
     )
 
+    _LOGGER.info("Running %s in subprocess...", run_job)
+
     process = await _asyncio.create_subprocess_exec(
         runner_job.program, *runner_job.args, cwd=working_dir_path, stderr=_sp.PIPE
     )
 
     return_code = await process.wait()
+
+    _LOGGER.info("Done.")
+
     if return_code != 0:
         await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
 
@@ -92,7 +97,7 @@ async def run_job(
         stderr = stderr_bytes.decode()
 
         _LOGGER.warning(
-            "An error ocurred running job %s: %s",
+            "An error occurred running job %s: %s",
             runner_job.id,
             stderr,
         )
