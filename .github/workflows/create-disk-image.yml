@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    concurrency: build-image-runner_serialized
+    concurrency: create-disk-image_serialized
     
     runs-on: windows-2025
     
