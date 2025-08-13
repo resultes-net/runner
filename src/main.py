@@ -21,6 +21,8 @@ PORT = 3000
 
 MAX_WORKERS = 8
 
+N_THREADS = 32
+
 LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
 
 DEFAULT_LOG_FILE_PATH = _pl.Path(__file__).parent / "runner.log"
@@ -51,12 +53,12 @@ async def main() -> None:
     _LOGGER.info("Log file path: %s", LOG_FILE_PATH)
     _LOGGER.info("Jobs dir path: %s", JOBS_DIR_PATH)
 
-    with _cf.ThreadPoolExecutor(MAX_WORKERS) as executor:
+    with _cf.ThreadPoolExecutor(N_THREADS) as executor:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
             context = _con.Context(JOBS_DIR_PATH, swift, executor)
 
             logging_message_receiver_factory = (
-                _facs.LoggingMessageReceiverSingletonFactory()
+                _facs.LoggingMessageReceiverSingletonFactory(executor)
             )
 
             request_receiver_factory = _facs.RequestReceiverSingletonFactory(context)

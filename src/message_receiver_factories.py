@@ -1,5 +1,6 @@
 import asyncio as _asyncio
 import collections.abc as _cabc
+import concurrent.futures as _cf
 import contextlib as _ctx
 import dataclasses as _dc
 import logging as _log
@@ -44,7 +45,8 @@ class _LoggingFactoryPayload:
 
 
 class LoggingMessageReceiverSingletonFactory:
-    def __init__(self) -> None:
+    def __init__(self, executor: _cf.Executor) -> None:
+        self._executor = executor
         self._payload: _LoggingFactoryPayload | None = None
         self._payload_created_event = _asyncio.Event()
 
@@ -86,4 +88,4 @@ class LoggingMessageReceiverSingletonFactory:
 
         _LOGGER.info("Starting log handler.")
 
-        await self._payload.log_handler.start()
+        await self._payload.log_handler.start(self._executor)
