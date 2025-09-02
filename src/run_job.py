@@ -1,4 +1,5 @@
 import asyncio as _asyncio
+import asyncio.subprocess as _asp
 import collections.abc as _cabc
 import logging as _log
 import pathlib as _pl
@@ -10,6 +11,7 @@ import jsonrpcserver.codes as _jrpcc
 import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
+import line_builder as _lb
 
 _LOGGER = _log.getLogger(__name__)
 
@@ -85,7 +87,9 @@ async def run_job(
         runner_job.program, *runner_job.args, cwd=working_dir_path, stderr=_sp.PIPE
     )
 
-    return_code = await process.wait()
+    return_code = await _wait_for_subprocess(
+        process, output_dir_path, runner_job.relative_log_file_path
+    )
 
     _LOGGER.info("Done.")
 
@@ -132,3 +136,54 @@ async def run_job(
         return _jrpcs.Success(results_dirs)
 
     return _jrpcs.Success()
+
+
+async def _wait_for_subprocess(
+    process: _asp.Process,
+    output_dir_path: _pl.Path,
+    relative_log_file_path: _pl.PureWindowsPath | None,
+) -> int:
+    if not relative_log_file_path:
+        return await process.wait()
+
+    return await _wait_for_subprocess_and_forward_logging(
+        process, output_dir_path, relative_log_file_path
+    )
+
+
+async def _wait_for_subprocess_and_forward_logging(
+    process: _asp.Process,
+    output_dir_path: _pl.Path,
+    relative_log_file_path: _pl.PureWindowsPath,
+) -> int:
+    log_file_path = output_dir_path / relative_log_file_path
+
+    await _wait_till_file_exists(log_file_path)
+
+    coroutine = process.wait()
+
+    line_builder = _lb.LineBuilder()
+    with log_file_path.open("rt") as log_file:
+        return_code = None
+        while return_code is None:
+            timeout_seconds = 3
+            try:
+                return_code = await _asyncio.wait_for(coroutine, timeout_seconds)
+            except _asyncio.TimeoutError:
+                pass
+
+            bytes = await _asyncio.to_thread(log_file.read)
+
+            new_lines = line_builder.add_bytes_and_get_new_lines(bytes)
+            for new_line in new_lines:
+                _LOGGER.info("%s: %s", log_file_path.name, new_line)
+
+        return return_code
+
+
+async def _wait_till_file_exists(log_file_path: _pl.Path) -> None:
+    log_file_creation_timeout_seconds = 10
+    async with _asyncio.timeout(log_file_creation_timeout_seconds):
+        while True:
+            if await _asyncio.to_thread(log_file_path.is_file):
+                break
