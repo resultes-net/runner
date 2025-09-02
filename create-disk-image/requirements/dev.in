@@ -3,3 +3,4 @@
 pip-compile-multi
 
 python-novaclient
+python-swiftclient
