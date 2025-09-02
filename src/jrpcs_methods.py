@@ -1,6 +1,8 @@
 import logging as _log
+import traceback as _tb
 
 import jsonrpcserver as _jrpcs
+import jsonrpcserver.codes as _jrpcsc
 import pydantic as _pyd
 import resultes_jsonrpc.jsonrpc.server as _rjjs
 import resultes_jsonrpc.jsonrpc.types as _rjjt
@@ -8,6 +10,8 @@ import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
 import run_job as _rj
+
+_LOGGER = _log.getLogger(__name__)
 
 
 # Make sure import of `jrpcm` is not "organized" away by VS Code
@@ -25,6 +29,11 @@ async def run_job(
         errors = validation_error.errors()
         return _jrpcs.InvalidParams(errors)
 
-    _log.info("Running runner job %s.", job.id)
+    _LOGGER.info("Running runner job %s.", job.id)
 
-    return await _rj.run_job(context, job)
+    try:
+        return await _rj.run_job(context, job)
+    except Exception as exception:
+        traceback = _tb.format_exc()
+        _LOGGER.error("Exception occurred: %s", traceback)
+        return _jrpcs.Error(_jrpcsc.ERROR_SERVER_ERROR, str(exception), traceback)
