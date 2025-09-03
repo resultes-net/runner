@@ -34,6 +34,6 @@ async def run_job(
     try:
         return await _rj.run_job(context, job)
     except Exception as exception:
-        traceback = _tb.format_exc()
-        _LOGGER.error("Exception occurred: %s", traceback)
+        _LOGGER.error("Exception occurred: %s", exc_info=exception)
+        traceback = "\n".join(_tb.format_exception(exception))
         return _jrpcs.Error(_jrpcsc.ERROR_SERVER_ERROR, str(exception), traceback)
