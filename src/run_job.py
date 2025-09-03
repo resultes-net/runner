@@ -47,7 +47,7 @@ def _get_result_paths(
 async def run_job(
     context: _con.Context, runner_job: _mrunner.RunnerJob
 ) -> _jrpcs.Result:
-    _LOGGER.info("%s - Starting job.", runner_job)
+    _LOGGER.info("%s - Starting job.", runner_job.id)
 
     object_storage_path = runner_job.object_storage_path
 
