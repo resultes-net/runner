@@ -197,7 +197,7 @@ class _ProcessWaiter:
                 bytes = await _asyncio.to_thread(log_file.read)
                 new_lines = line_builder.add_bytes_and_get_new_lines(bytes)
                 for new_line in new_lines:
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "%s - %s: %s", self._job_id, log_file_path.name, new_line
                     )
 
