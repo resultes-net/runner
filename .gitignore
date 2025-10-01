@@ -6,3 +6,4 @@ venv2/
 **/.mypy_cache/*
 src/runner.log*
 jobs/*
+trnsys/*
