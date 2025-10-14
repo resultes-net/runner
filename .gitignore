@@ -1,9 +1,6 @@
-venv3.13/
-venv2/
+venv/
 .idea/
-.vscode/
 **/__pycache__/*
 **/.mypy_cache/*
 src/runner.log*
 jobs/*
-trnsys/*
