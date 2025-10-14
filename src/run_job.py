@@ -104,7 +104,7 @@ async def run_job(
         stderr = stderr_bytes.decode()
 
         _LOGGER.warning(
-            "%s - An error occurred: %s",
+            "%s - An error occurred: '%s'.",
             runner_job.id,
             stderr,
         )
