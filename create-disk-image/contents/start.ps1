@@ -13,6 +13,7 @@ nssm set ResulTES AppStderr C:\resultes\logs\service-error.log
 
 nssm set ResulTES AppEnvironmentExtra `
     JOBS_DIR_PATH=C:\resultes\jobs `
+    REMOVE_COMPLETED_JOBS=1 `
     LOG_FILE_PATH=C:\resultes\logs\runner.log
 
 nssm start ResulTES

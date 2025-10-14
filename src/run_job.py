@@ -96,7 +96,8 @@ async def run_job(
     _LOGGER.info("%s - Done.", runner_job.id)
 
     if return_code != 0:
-        await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
+        if context.shall_remove_completed_jobs:
+            await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
 
         assert process.stderr
         stderr_bytes = await process.stderr.read()
@@ -132,7 +133,8 @@ async def run_job(
         runner_job.results_glob_pattern,
     )
 
-    await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
+    if context.shall_remove_completed_jobs:
+        await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
 
     if results_dirs is not None:
         return _jrpcs.Success(results_dirs)

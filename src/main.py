@@ -35,6 +35,9 @@ DEFAULT_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
 
 JOBS_DIR_PATH = _pl.Path(_os.environ.get("JOBS_DIR_PATH", DEFAULT_JOBS_DIR_PATH))
 
+SHALL_REMOVE_COMPLETED_JOBS = bool(int(_os.environ.get("REMOVE_COMPLETED_JOBS", "0")))
+
+
 _LOGGER = _log.getLogger(__name__)
 
 
@@ -66,7 +69,9 @@ async def main() -> None:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
             try:
                 async with _asyncio.TaskGroup() as task_group:
-                    context = _con.Context(JOBS_DIR_PATH, swift, executor)
+                    context = _con.Context(
+                        JOBS_DIR_PATH, SHALL_REMOVE_COMPLETED_JOBS, swift, executor
+                    )
 
                     logging_message_receiver_factory = (
                         _facs.LoggingMessageReceiverSingletonFactory(executor)
@@ -112,7 +117,9 @@ if __name__ == "__main__":
 
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
 
-    if JOBS_DIR_PATH.exists():
+    _LOGGER.info("Running in directory %s.", _pl.Path().absolute())
+
+    if SHALL_REMOVE_COMPLETED_JOBS and JOBS_DIR_PATH.exists():
         _su.rmtree(JOBS_DIR_PATH)
 
     _asyncio.run(main())
