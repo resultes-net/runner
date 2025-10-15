@@ -5,7 +5,6 @@ import logging as _log
 import logging.handlers as _handlers
 import os as _os
 import pathlib as _pl
-import shutil as _su
 import signal as _sig
 import typing as _tp
 
@@ -24,8 +23,6 @@ MAX_WORKERS = 8
 
 N_THREADS = 32
 
-LOG_LEVEL = _os.environ.get("LOG_LEVEL", "INFO")
-
 DEFAULT_LOG_FILE_PATH = _pl.Path(__file__).parent / "runner.log"
 
 LOG_FILE_PATH = _pl.Path(_os.environ.get("LOG_FILE_PATH", DEFAULT_LOG_FILE_PATH))
@@ -34,8 +31,6 @@ LOG_FILE_PATH = _pl.Path(_os.environ.get("LOG_FILE_PATH", DEFAULT_LOG_FILE_PATH)
 DEFAULT_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
 
 JOBS_DIR_PATH = _pl.Path(_os.environ.get("JOBS_DIR_PATH", DEFAULT_JOBS_DIR_PATH))
-
-SHALL_REMOVE_COMPLETED_JOBS = bool(int(_os.environ.get("REMOVE_COMPLETED_JOBS", "0")))
 
 
 _LOGGER = _log.getLogger(__name__)
@@ -69,8 +64,9 @@ async def main() -> None:
         async with _swmt.Swift(executor, MAX_WORKERS) as swift:
             try:
                 async with _asyncio.TaskGroup() as task_group:
+                    shall_remove_completed_jobs = True
                     context = _con.Context(
-                        JOBS_DIR_PATH, SHALL_REMOVE_COMPLETED_JOBS, swift, executor
+                        JOBS_DIR_PATH, shall_remove_completed_jobs, swift, executor
                     )
 
                     logging_message_receiver_factory = (
@@ -107,7 +103,7 @@ def _setup_logging() -> None:
 
     handlers: list[_log.Handler] = [stream_handler, file_handler]
 
-    _log.basicConfig(format=_logc.LOG_FORMAT, level=LOG_LEVEL, handlers=handlers)
+    _log.basicConfig(format=_logc.LOG_FORMAT, level=_log.INFO, handlers=handlers)
 
 
 if __name__ == "__main__":
@@ -118,8 +114,5 @@ if __name__ == "__main__":
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
 
     _LOGGER.info("Running in directory %s.", _pl.Path().absolute())
-
-    if SHALL_REMOVE_COMPLETED_JOBS and JOBS_DIR_PATH.exists():
-        _su.rmtree(JOBS_DIR_PATH)
 
     _asyncio.run(main())
