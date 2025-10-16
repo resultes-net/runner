@@ -1,10 +1,13 @@
 import asyncio as _asyncio
 import asyncio.subprocess as _asp
 import collections.abc as _cabc
+import concurrent.futures as _cf
+import dataclasses as _dc
 import logging as _log
 import pathlib as _pl
 import shutil as _su
 import subprocess as _sp
+import typing as _tp
 
 import jsonrpcserver as _jrpcs
 import jsonrpcserver.codes as _jrpcc
@@ -28,7 +31,7 @@ def _zip_dir(input_dir_path: _pl.Path, output_file_path: _pl.Path) -> None:
     _su.make_archive(base_name, format, root_dir)
 
 
-def _get_result_paths(
+def _get_return_paths(
     output_dir_path: _pl.Path, results_glob_pattern: str | None
 ) -> _cabc.Sequence[str] | None:
     if not results_glob_pattern:
@@ -44,102 +47,9 @@ def _get_result_paths(
     return result_path_strings
 
 
-async def run_job(
-    context: _con.Context, runner_job: _mrunner.RunnerJob
-) -> _jrpcs.Result:
-    _LOGGER.info("%s - Starting job.", runner_job.id)
-
-    object_storage_path = runner_job.object_storage_path
-
-    job_dir_path = context.jobs_dir_path / runner_job.id
-
-    loop = _asyncio.get_event_loop()
-
-    job_dir_exists = await loop.run_in_executor(context.executor, job_dir_path.exists)
-    if job_dir_exists:
-        return _jrpcs.Error(
-            code=_jrpcc.ERROR_SERVER_ERROR,
-            message=f"Have seen job ID {runner_job.id} before. Job IDs must be unique, forever.",
-        )
-
-    output_file_name = object_storage_path.path.split("/")[-1]
-
-    output_file_path = job_dir_path / output_file_name
-
-    await context.swift.download(object_storage_path, output_file_path)
-
-    output_dir_path = job_dir_path / output_file_path.stem
-    await loop.run_in_executor(context.executor, output_dir_path.mkdir)
-
-    await loop.run_in_executor(
-        context.executor, _unzip, output_file_path, output_dir_path
-    )
-
-    working_dir_path = (
-        runner_job.program.parent
-        if runner_job.working_dir is None
-        else output_dir_path / runner_job.working_dir
-    )
-
-    _LOGGER.info("%s - Running %s in subprocess...", runner_job.id, runner_job)
-
-    process = await _asyncio.create_subprocess_exec(
-        runner_job.program, *runner_job.args, cwd=working_dir_path, stderr=_sp.PIPE
-    )
-
-    process_waiter = _ProcessWaiter(
-        runner_job.id, process, output_dir_path, runner_job.relative_log_file_path
-    )
-
-    return_code = await process_waiter.wait()
-
-    _LOGGER.info("%s - Done.", runner_job.id)
-
-    if return_code != 0:
-        if context.shall_remove_completed_jobs:
-            await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
-
-        assert process.stderr
-        stderr_bytes = await process.stderr.read()
-        stderr = stderr_bytes.decode()
-
-        _LOGGER.warning(
-            "%s - An error occurred: '%s'.",
-            runner_job.id,
-            stderr,
-        )
-
-        return _jrpcs.Error(
-            code=_jrpcc.ERROR_SERVER_ERROR,
-            message=f"Job program exited with non-zero exit code: {stderr}",
-        )
-
-    result_file_name = f"{runner_job.id}.zip"
-    result_file_path = job_dir_path / result_file_name
-    await loop.run_in_executor(
-        context.executor, _zip_dir, output_dir_path, result_file_path
-    )
-
-    result_object_storage_path = _mrunner.ObjectStorageZipPath(
-        container="resultes-results",
-        path=f"results/{result_file_name}",
-    )
-    await context.swift.upload(result_file_path, result_object_storage_path)
-
-    results_dirs = await loop.run_in_executor(
-        context.executor,
-        _get_result_paths,
-        output_dir_path,
-        runner_job.results_glob_pattern,
-    )
-
-    if context.shall_remove_completed_jobs:
-        await loop.run_in_executor(context.executor, _su.rmtree, job_dir_path)
-
-    if results_dirs is not None:
-        return _jrpcs.Success(results_dirs)
-
-    return _jrpcs.Success()
+@_dc.dataclass
+class _CommandError:
+    message: str
 
 
 class _ProcessWaiter:
@@ -205,3 +115,147 @@ class _ProcessWaiter:
 
                 sleep_seconds = 1.0
                 await _asyncio.sleep(sleep_seconds)
+
+
+class JobRunner:
+    def __init__(
+        self,
+        runner_job: _mrunner.RunnerJob,
+        context: _con.Context,
+        loop: _asyncio.AbstractEventLoop,
+    ) -> None:
+        self._runner_job = runner_job
+        self._context = context
+        self._loop = loop
+
+        self._job_dir_path = context.jobs_dir_path / self._runner_job.id
+
+        output_file_name = runner_job.object_storage_input_path.path.split("/")[-1]
+        output_file_path = self._job_dir_path / output_file_name
+        self._base_dir_path = self._job_dir_path / output_file_path.stem
+
+    @property
+    def _job_id(self) -> str:
+        return self._runner_job.id
+
+    async def run(self) -> _jrpcs.Result:
+        self._log_info("Job started.")
+
+        job_dir_exists = await self._run_in_executor(self._job_dir_path.exists)
+
+        if job_dir_exists:
+            return _jrpcs.Error(
+                code=_jrpcc.ERROR_SERVER_ERROR,
+                message=f"Have seen job ID {self._job_id} before. Job IDs must be unique, forever.",
+            )
+
+        await self._download_input()
+
+        await self._run_commands()
+
+        await self._upload_results()
+
+        return_paths = await self._get_return_paths()
+
+        if self._context.shall_remove_completed_jobs:
+            await self._run_in_executor(_su.rmtree, self._job_dir_path)
+
+        if return_paths is not None:
+            return _jrpcs.Success(return_paths)
+
+        return _jrpcs.Success()
+
+    def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
+        augmented_message = f"%s - {message}"
+        _LOGGER.info(augmented_message, self._job_id, *args, **kwargs)
+
+    async def _run_in_executor[*A, T](
+        self,
+        method: _cabc.Callable[[*A], T],
+        *args: *A,
+    ) -> T:
+        return await self._loop.run_in_executor(self._context.executor, method, *args)
+
+    async def _download_input(
+        self,
+    ) -> None:
+        output_file_path = self._base_dir_path.with_suffix(".zip")
+
+        await context.swift.download(
+            self._runner_job.object_storage_input_path, output_file_path
+        )
+
+        await self._run_in_executor(self._base_dir_path.mkdir)
+        await self._run_in_executor(_unzip, output_file_path, self._base_dir_path)
+
+    async def _run_commands(self) -> None:
+        for command in self._runner_job.commands:
+            error = await self._run_command(command)
+
+            if error:
+                raise _jrpcs.JsonRpcError(
+                    code=_jrpcc.ERROR_SERVER_ERROR,
+                    message=f"Job program exited with non-zero exit code: {error.message}",
+                )
+
+    async def _run_command(
+        self,
+        command: _mrunner.Command,
+    ) -> None | _CommandError:
+        working_dir_path = (
+            command.program.parent
+            if command.working_dir is None
+            else self._base_dir_path / command.working_dir
+        )
+
+        self._log_info("Running %s in subprocess...", command)
+
+        process = await _asyncio.create_subprocess_exec(
+            command.program, *command.args, cwd=working_dir_path, stderr=_sp.PIPE
+        )
+
+        process_waiter = _ProcessWaiter(
+            self._job_id, process, self._base_dir_path, command.relative_log_file_path
+        )
+
+        return_code = await process_waiter.wait()
+
+        self._log_info("Done.")
+
+        if return_code != 0:
+            assert process.stderr
+            stderr_bytes = await process.stderr.read()
+            stderr = stderr_bytes.decode()
+
+            _LOGGER.warning(
+                "%s - An error occurred running command %s: '%s'.",
+                self._job_id,
+                command,
+                stderr,
+            )
+
+            return _CommandError(stderr)
+
+        return None
+
+    async def _upload_results(
+        self,
+    ):
+        result_file_name = f"{self._job_id}.zip"
+        result_file_path = self._job_dir_path / result_file_name
+        await self._run_in_executor(_zip_dir, self._base_dir_path, result_file_path)
+
+        result_object_storage_path = _mrunner.ObjectStorageOutputZipFilePath(
+            container="resultes-results",
+            path=f"results/{result_file_name}",
+        )
+        await context.swift.upload(result_file_path, result_object_storage_path)
+
+    async def _get_return_paths(self) -> _cabc.Sequence[str] | None:
+        return_paths = await self._run_in_executor(
+            _get_return_paths,
+            self._base_dir_path,
+            self._runner_job.return_paths_rglob_pattern,
+        )
+
+        return return_paths
