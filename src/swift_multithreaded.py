@@ -1,4 +1,5 @@
 import asyncio as _asyncio
+import collections.abc as _cabc
 import concurrent.futures as _cf
 import contextlib as _ctx
 import logging as _log
@@ -57,7 +58,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
 
     async def download(
         self,
-        input_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
+        input_object_storage_zip_path: _mrunner.ObjectStorageInputZipFilePath,
         output_file_path: _pl.Path,
     ) -> None:
         _LOGGER.info(
@@ -74,7 +75,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
 
     def _download(
         self,
-        input_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
+        input_object_storage_zip_path: _mrunner.ObjectStorageInputZipFilePath,
         output_file_path: _pl.Path,
         connection: _sclient.Connection,
     ) -> None:
@@ -88,7 +89,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
     async def upload(
         self,
         input_file_path: _pl.Path,
-        output_object_storage_zip_path: _mrunner.ObjectStorageZipPath,
+        output_object_storage_zip_path: _mrunner.ObjectStorageOutputFilePath,
     ) -> None:
         _LOGGER.info(
             "Uploading %s to %s...", input_file_path, output_object_storage_zip_path
@@ -104,7 +105,7 @@ class Swift(_ctx.AbstractAsyncContextManager["Swift"]):
 
     async def _run_in_executor_with_connection[*S, T](
         self,
-        func: _tp.Callable[[*S, _sclient.Connection], T],
+        func: _cabc.Callable[[*S, _sclient.Connection], T],
         *args: *S,
     ) -> T:
         async with self._free_connection() as connection:
