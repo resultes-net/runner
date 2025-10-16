@@ -1,7 +1,7 @@
+import collections.abc as _cabc
 import contextlib as _ctx
 import pathlib as _pl
 import threading as _thread
-import typing as _tp
 
 import resultes_openstack_utils.clouds_yaml as _cyaml
 import resultes_openstack_utils.keystone as _ks
@@ -12,7 +12,7 @@ _CHUNK_SIZE = 512 * 1024
 
 
 @_ctx.contextmanager
-def create_connection() -> _tp.Iterator[_sclient.Connection]:
+def create_connection() -> _cabc.Iterator[_sclient.Connection]:
     clouds_yaml_file_path = _pl.Path(__file__).parents[1] / "config" / "clouds.yaml"
 
     data = _cyaml.get_clouds_yaml_openstack_json(clouds_yaml_file_path)
@@ -27,7 +27,7 @@ def create_connection() -> _tp.Iterator[_sclient.Connection]:
 
 
 def download_storage_object(
-    object_storage_path: _mrunner.ObjectStorageZipPath,
+    object_storage_path: _mrunner.ObjectStorageInputZipFilePath,
     output_file_path: _pl.Path,
     connection: _sclient.Connection,
     shutdown_event: _thread.Event | None = None,
@@ -57,12 +57,9 @@ def download_storage_object(
 
 def upload_storage_object(
     input_file_path: _pl.Path,
-    object_storage_path: _mrunner.ObjectStorageZipPath,
+    object_storage_path: _mrunner.ObjectStorageOutputFilePath,
     connection: _sclient.Connection,
 ) -> None:
-    if object_storage_path.version is not None:
-        raise ValueError("Version must not be given for upload.")
-
     with input_file_path.open("br") as contents:
         connection.put_object(
             object_storage_path.container, object_storage_path.path, contents
