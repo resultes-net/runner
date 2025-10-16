@@ -255,7 +255,7 @@ class JobRunner:
         return_paths = await self._run_in_executor(
             _get_return_paths,
             self._base_dir_path,
-            self._runner_job.return_paths_rglob_pattern,
+            self._runner_job.return_paths_glob_pattern,
         )
 
         return return_paths
