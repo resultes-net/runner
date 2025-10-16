@@ -1,3 +1,4 @@
+import asyncio as _asyncio
 import logging as _log
 
 import jsonrpcserver as _jrpcs
@@ -7,7 +8,7 @@ import resultes_jsonrpc.jsonrpc.types as _rjjt
 import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
-import run_job as _rj
+import job_runner as _jr
 
 _LOGGER = _log.getLogger(__name__)
 
@@ -50,4 +51,8 @@ async def run_job(
 
     _LOGGER.info("Running runner job %s.", job.id)
 
-    return await _rj.run_job(context, job)
+    loop = _asyncio.get_running_loop()
+
+    job_runner = _jr.JobRunner(job, context, loop)
+
+    return await job_runner.run()

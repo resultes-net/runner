@@ -1,7 +1,6 @@
 import asyncio as _asyncio
 import asyncio.subprocess as _asp
 import collections.abc as _cabc
-import concurrent.futures as _cf
 import dataclasses as _dc
 import logging as _log
 import pathlib as _pl
@@ -181,7 +180,7 @@ class JobRunner:
     ) -> None:
         output_file_path = self._base_dir_path.with_suffix(".zip")
 
-        await context.swift.download(
+        await self._context.swift.download(
             self._runner_job.object_storage_input_path, output_file_path
         )
 
@@ -249,7 +248,7 @@ class JobRunner:
             container="resultes-results",
             path=f"results/{result_file_name}",
         )
-        await context.swift.upload(result_file_path, result_object_storage_path)
+        await self._context.swift.upload(result_file_path, result_object_storage_path)
 
     async def _get_return_paths(self) -> _cabc.Sequence[str] | None:
         return_paths = await self._run_in_executor(
