@@ -8,7 +8,7 @@ import resultes_jsonrpc.jsonrpc.types as _rjjt
 import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
-import job_runner as _jr
+import job_runner.job_runner as _jr
 
 _LOGGER = _log.getLogger(__name__)
 

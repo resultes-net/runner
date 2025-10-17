@@ -1,0 +1,81 @@
+import pathlib as _pl
+import shutil as _su
+import zipfile as _zf
+
+import resultes_pydantic_models.runner as _mrunner
+
+import swift_multithreaded as _sm
+
+from . import executor as _ex
+
+
+def _zip_dir(input_dir_path: _pl.Path, output_file_path: _pl.Path) -> None:
+    base_name = str(output_file_path.with_suffix(""))
+    format = output_file_path.suffix.removeprefix(".")
+    root_dir = input_dir_path
+
+    _su.make_archive(base_name, format, root_dir)
+
+
+class ResultUploader:
+    def __init__(
+        self,
+        working_dir_path: _pl.Path,
+        upload_dir_path: _pl.Path,
+        swift: _sm.Swift,
+        executor: _ex.Executor,
+    ) -> None:
+        self._working_dir_path = working_dir_path
+        self._upload_dir_path = upload_dir_path
+        self._swift = swift
+        self._executor = executor
+
+    async def upload_result(self, result: _mrunner.Result) -> None:
+        match result:
+            case _mrunner.SingleFileResult():
+                await self._upload_single_file_result(result)
+            case _mrunner.MultipleFilesResult():
+                await self._upload_multiple_files_result(result)
+            case _:
+                _tp.assert_never(_)
+
+    async def _upload_single_file_result(
+        self, result: _mrunner.SingleFileResult
+    ) -> None:
+        result_file_path = self._working_dir_path / result.file_path
+
+        await self._swift.upload(
+            result_file_path, result.object_storage_output_file_path
+        )
+
+    async def _upload_multiple_files_result(
+        self, result: _mrunner.MultipleFilesResult
+    ) -> None:
+        zip_file_path = await self._executor.run(self._create_zip_file, result)
+
+        await self._swift.upload(zip_file_path, result.object_storage_output_file_path)
+
+    def _create_zip_file(self, result: _mrunner.MultipleFilesResult) -> _pl.Path:
+        paths = [
+            p for g in result.glob_patterns for p in self._working_dir_path.glob(g)
+        ]
+
+        def get_path_length(path: _pl.Path) -> int:
+            return len(str(path))
+
+        sorted_paths = sorted(paths, key=get_path_length)
+
+        relative_result_zip_file_path = (
+            _pl.PurePath(result.object_storage_output_file_path.container)
+            / result.object_storage_output_file_path.path
+        )
+        result_zip_file_path = self._upload_dir_path / relative_result_zip_file_path
+
+        with _zf.ZipFile(result_zip_file_path, mode="w") as zip_file:
+            for path in sorted_paths:
+                if path.is_dir():
+                    zip_file.mkdir(str(path))
+                else:
+                    zip_file.write(path)
+
+        return result_zip_file_path
