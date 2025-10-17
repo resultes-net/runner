@@ -80,6 +80,8 @@ class JobRunner:
                 message=f"Have seen job ID {self._job_id} before. Job IDs must be unique, forever.",
             )
 
+        await self._executor.run(self._create_directories)
+
         await self._download_input()
 
         await self._run_commands()
@@ -96,6 +98,11 @@ class JobRunner:
 
         return _jrpcs.Success()
 
+    def _create_directories(self):
+        self._job_dir_path.mkdir()
+        self._downlad_dir_path.mkdir()
+        self._upload_dir_path.mkdir()
+
     def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
         augmented_message = f"%s - {message}"
         _LOGGER.info(augmented_message, self._job_id, *args, **kwargs)
@@ -103,15 +110,17 @@ class JobRunner:
     async def _download_input(
         self,
     ) -> None:
-        output_file_name = self._runner_job.object_storage_input_path.path.split("/")[-1]
-        output_file_path = self._downlad_dir_path / output_file_name
+        downloaded_file_name = self._runner_job.object_storage_input_path.path.split("/")[
+            -1
+        ]
+        downloaded_file_path = self._downlad_dir_path / downloaded_file_name
 
         await self._context.swift.download(
-            self._runner_job.object_storage_input_path, output_file_path
+            self._runner_job.object_storage_input_path, downloaded_file_path
         )
 
         await self._executor.run(self._working_dir_path.mkdir)
-        await self._executor.run(_unzip, output_file_path, self._working_dir_path)
+        await self._executor.run(_unzip, downloaded_file_path, self._working_dir_path)
 
     async def _run_commands(self) -> None:
         for command in self._runner_job.commands:
@@ -133,14 +142,17 @@ class JobRunner:
             else self._working_dir_path / command.working_dir
         )
 
-        self._log_info("Running %s in subprocess...", command)
+        self._log_info("Running %s in subprocess with full working dir %s...", command, working_dir_path)
 
         process = await _asyncio.create_subprocess_exec(
             command.program, *command.args, cwd=working_dir_path, stderr=_sp.PIPE
         )
 
         process_waiter = _pw.ProcessWaiter(
-            self._job_id, process, self._working_dir_path, command.relative_log_file_path
+            self._job_id,
+            process,
+            self._working_dir_path,
+            command.relative_log_file_path,
         )
 
         return_code = await process_waiter.wait()
@@ -167,7 +179,10 @@ class JobRunner:
         self,
     ):
         result_uploader = _ru.ResultUploader(
-            self._working_dir_path, self._upload_dir_path, self._context.swift, self._executor
+            self._working_dir_path,
+            self._upload_dir_path,
+            self._context.swift,
+            self._executor,
         )
 
         for result in self._runner_job.results:

@@ -1,5 +1,4 @@
 import pathlib as _pl
-import shutil as _su
 import zipfile as _zf
 
 import resultes_pydantic_models.runner as _mrunner
@@ -7,14 +6,6 @@ import resultes_pydantic_models.runner as _mrunner
 import swift_multithreaded as _sm
 
 from . import executor as _ex
-
-
-def _zip_dir(input_dir_path: _pl.Path, output_file_path: _pl.Path) -> None:
-    base_name = str(output_file_path.with_suffix(""))
-    format = output_file_path.suffix.removeprefix(".")
-    root_dir = input_dir_path
-
-    _su.make_archive(base_name, format, root_dir)
 
 
 class ResultUploader:
@@ -71,11 +62,19 @@ class ResultUploader:
         )
         result_zip_file_path = self._upload_dir_path / relative_result_zip_file_path
 
+        result_zip_file_containing_dir_path = result_zip_file_path.parent
+
+        if not result_zip_file_containing_dir_path.is_dir():
+            result_zip_file_path.parent.mkdir(parents=True)
+
         with _zf.ZipFile(result_zip_file_path, mode="w") as zip_file:
             for path in sorted_paths:
+                assert path.exists()
+
+                relative_path = path.relative_to(self._working_dir_path)
                 if path.is_dir():
-                    zip_file.mkdir(str(path))
+                    zip_file.mkdir(str(relative_path))
                 else:
-                    zip_file.write(path)
+                    zip_file.write(path, relative_path)
 
         return result_zip_file_path

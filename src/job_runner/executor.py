@@ -1,9 +1,12 @@
 import asyncio as _asyncio
-import concurrent.futures as _cf
 import collections.abc as _cabc
+import concurrent.futures as _cf
+
 
 class Executor:
-    def __init__(self, loop: _asyncio.AbstractEventLoop, executor: _cf.Executor) -> None:
+    def __init__(
+        self, loop: _asyncio.AbstractEventLoop, executor: _cf.Executor
+    ) -> None:
         self._loop = loop
         self._executor = executor
 

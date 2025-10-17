@@ -113,6 +113,9 @@ if __name__ == "__main__":
 
     _sig.signal(_sig.SIGINT, _on_ctrl_c)
 
+    if not JOBS_DIR_PATH.is_dir():
+        JOBS_DIR_PATH.mkdir()
+
     _LOGGER.info("Running in directory %s.", _pl.Path().absolute())
 
     _asyncio.run(main())
