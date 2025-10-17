@@ -1,5 +1,6 @@
 import asyncio as _asyncio
 import asyncio.subprocess as _asp
+import datetime as _dt
 import logging as _log
 import pathlib as _pl
 
@@ -13,13 +14,13 @@ class ProcessWaiter:
         self,
         job_id: str,
         process: _asp.Process,
-        output_dir_path: _pl.Path,
+        working_dir_path: _pl.Path,
         relative_log_file_path: _pl.PureWindowsPath | None,
     ) -> None:
         self._job_id = job_id
         self._process = process
         self._is_process_done = False
-        self._output_dir_path = output_dir_path
+        self._working_dir_path = working_dir_path
         self._relative_log_file_path = relative_log_file_path
 
     async def wait(
@@ -28,7 +29,7 @@ class ProcessWaiter:
         if not self._relative_log_file_path:
             return await self._process.wait()
 
-        log_file_path = self._output_dir_path / self._relative_log_file_path
+        log_file_path = self._working_dir_path / self._relative_log_file_path
 
         return await self._wait_for_subprocess_and_forward_logging(log_file_path)
 
@@ -49,6 +50,10 @@ class ProcessWaiter:
         return return_code
 
     async def _wait_till_file_exists(self, log_file_path: _pl.Path) -> None:
+        _LOGGER.info("Waiting for file %s to be created...", log_file_path)
+
+        start = _dt.datetime.now()
+
         log_file_creation_timeout_seconds = 10
         async with _asyncio.timeout(log_file_creation_timeout_seconds):
             while True:
@@ -57,6 +62,11 @@ class ProcessWaiter:
 
                 sleep_seconds = 1.0
                 await _asyncio.sleep(sleep_seconds)
+
+        now = _dt.datetime.now()
+        elapsed = now - start
+
+        _LOGGER.info("...DONE. Was created after %f seconds.", elapsed.total_seconds)
 
     async def _log_file_reader(self, log_file_path: _pl.Path) -> None:
         line_builder = _lb.LineBuilder()
