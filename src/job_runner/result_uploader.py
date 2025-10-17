@@ -51,10 +51,7 @@ class ResultUploader:
             p for g in result.glob_patterns for p in self._working_dir_path.glob(g)
         ]
 
-        def get_path_length(path: _pl.Path) -> int:
-            return len(str(path))
-
-        sorted_paths = sorted(paths, key=get_path_length)
+        sorted_paths = sorted(paths)
 
         relative_result_zip_file_path = (
             _pl.PurePath(result.object_storage_output_file_path.container)
