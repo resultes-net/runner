@@ -93,7 +93,7 @@ class ResultUploader:
         size_mb = round(stat.st_size / 1024 / 1024)
 
         _LOGGER.info(
-            "Zip file file %s is %f MB big and contains %i files.",
+            "Zip file %s is %f MB big and contains %i files.",
             result_zip_file_path,
             size_mb,
             n_files,

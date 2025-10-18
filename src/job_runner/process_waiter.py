@@ -77,7 +77,7 @@ class ProcessWaiter:
         while (delta := _dt.datetime.now() - start) < max_delta:
             if await _asyncio.to_thread(log_file_path.is_file):
                 _LOGGER.info(
-                    "...DONE. Was created after %f seconds.", delta.total_seconds
+                    "...DONE. Was created after %f seconds.", delta.total_seconds()
                 )
                 return True
 
@@ -86,7 +86,7 @@ class ProcessWaiter:
         _LOGGER.error(
             "Log file %s was not created after %f seconds.",
             log_file_path,
-            delta.total_seconds,
+            delta.total_seconds(),
         )
 
         return False
