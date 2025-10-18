@@ -54,7 +54,7 @@ class ResultUploader:
             p for g in result.glob_patterns for p in self._working_dir_path.glob(g)
         ]
 
-        sorted_paths = sorted(paths)
+        sorted_paths = sorted(paths, key=str)
 
         formatted_sorted_paths = "\n".join(f"\t{p}" for p in sorted_paths)
         _LOGGER.debug(
