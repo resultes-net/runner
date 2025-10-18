@@ -8,7 +8,7 @@ import swift_multithreaded as _sm
 
 from . import executor as _ex
 
-_LOGGER = _log.Logger(__name__)
+_LOGGER = _log.getLogger(__name__)
 
 
 class ResultUploader:
