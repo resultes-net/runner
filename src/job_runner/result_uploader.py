@@ -56,6 +56,11 @@ class ResultUploader:
 
         sorted_paths = sorted(paths)
 
+        formatted_sorted_paths = "\n".join(f"\t{p}" for p in sorted_paths)
+        _LOGGER.debug(
+            "Glob patterns expanded to following paths: %s", formatted_sorted_paths
+        )
+
         relative_result_zip_file_path = (
             _pl.PurePath(result.object_storage_output_file_path.container)
             / result.object_storage_output_file_path.path
