@@ -37,36 +37,59 @@ class ProcessWaiter:
         self,
         log_file_path: _pl.Path,
     ) -> int:
-        await self._wait_till_file_exists(log_file_path)
+        seconds_to_wait = 10.0
 
-        log_file_reader_task = _asyncio.create_task(
-            self._log_file_reader(log_file_path)
+        was_log_file_created = await self._is_file_created_within(
+            log_file_path, seconds_to_wait
         )
+
+        log_file_reader_task: _asyncio.Task[None] | None = None
+
+        if was_log_file_created:
+            log_file_reader_task = _asyncio.create_task(
+                self._log_file_reader(log_file_path)
+            )
 
         return_code = await self._process.wait()
         self._is_process_done = True
-        await log_file_reader_task
+
+        if log_file_reader_task:
+            await log_file_reader_task
+
+        if return_code == 0 and not was_log_file_created:
+            # If the log file was not created but the program failed anyway, then we just report the
+            # program's failure as that will give us more insight.
+            raise TimeoutError(
+                f"Log file {log_file_path} was not created within {seconds_to_wait} second(s)."
+            )
 
         return return_code
 
-    async def _wait_till_file_exists(self, log_file_path: _pl.Path) -> None:
+    async def _is_file_created_within(
+        self, log_file_path: _pl.Path, seconds_to_wait: float
+    ) -> bool:
         _LOGGER.info("Waiting for file %s to be created...", log_file_path)
 
         start = _dt.datetime.now()
+        max_delta = _dt.timedelta(seconds=seconds_to_wait)
 
-        log_file_creation_timeout_seconds = 10
-        async with _asyncio.timeout(log_file_creation_timeout_seconds):
-            while True:
-                if await _asyncio.to_thread(log_file_path.is_file):
-                    break
+        sleep_seconds = 1.0
+        while (delta := _dt.datetime.now() - start) < max_delta:
+            if await _asyncio.to_thread(log_file_path.is_file):
+                _LOGGER.info(
+                    "...DONE. Was created after %f seconds.", delta.total_seconds
+                )
+                return True
 
-                sleep_seconds = 1.0
-                await _asyncio.sleep(sleep_seconds)
+            await _asyncio.sleep(sleep_seconds)
 
-        now = _dt.datetime.now()
-        elapsed = now - start
+        _LOGGER.error(
+            "Log file %s was not created after %f seconds.",
+            log_file_path,
+            delta.total_seconds,
+        )
 
-        _LOGGER.info("...DONE. Was created after %f seconds.", elapsed.total_seconds)
+        return False
 
     async def _log_file_reader(self, log_file_path: _pl.Path) -> None:
         line_builder = _lb.LineBuilder()

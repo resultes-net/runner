@@ -186,7 +186,7 @@ class JobRunner:
         )
 
         for result in self._runner_job.results:
-            await result_uploader.upload_result(result)
+            await result_uploader.upload(result)
 
     async def _get_return_paths(self) -> _cabc.Sequence[str] | None:
         return_paths = await self._executor.run(

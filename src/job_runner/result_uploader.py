@@ -1,3 +1,4 @@
+import logging as _log
 import pathlib as _pl
 import zipfile as _zf
 
@@ -6,6 +7,8 @@ import resultes_pydantic_models.runner as _mrunner
 import swift_multithreaded as _sm
 
 from . import executor as _ex
+
+_LOGGER = _log.Logger(__name__)
 
 
 class ResultUploader:
@@ -21,7 +24,7 @@ class ResultUploader:
         self._swift = swift
         self._executor = executor
 
-    async def upload_result(self, result: _mrunner.Result) -> None:
+    async def upload(self, result: _mrunner.Result) -> None:
         match result:
             case _mrunner.SingleFileResult():
                 await self._upload_single_file_result(result)
@@ -70,8 +73,30 @@ class ResultUploader:
 
                 relative_path = path.relative_to(self._working_dir_path)
                 if path.is_dir():
+                    _LOGGER.debug(
+                        "Creating directory %s in zip file %s.",
+                        relative_path,
+                        result_zip_file_path,
+                    )
                     zip_file.mkdir(str(relative_path))
                 else:
+                    _LOGGER.debug(
+                        "Adding file %s to zip file %s.",
+                        relative_path,
+                        result_zip_file_path,
+                    )
                     zip_file.write(path, relative_path)
+
+            n_files = sum(1 for i in zip_file.infolist() if not i.is_dir())
+
+        stat = result_zip_file_path.stat()
+        size_mb = round(stat.st_size / 1024 / 1024)
+
+        _LOGGER.info(
+            "Zip file file %s is %f MB big and contains %i files.",
+            result_zip_file_path,
+            size_mb,
+            n_files,
+        )
 
         return result_zip_file_path
