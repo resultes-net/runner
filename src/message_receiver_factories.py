@@ -60,7 +60,7 @@ class LoggingMessageReceiverSingletonFactory:
     def _setup_and_get_log_handler(
         jsonrpc_client: _rjjc.JsonRpcClient,
     ) -> _jrpcl.JsonRpcLogHandler:
-        jsonrcp_log_handler = _jrpcl.JsonRpcLogHandler(jsonrpc_client, _log.INFO)
+        jsonrcp_log_handler = _jrpcl.JsonRpcLogHandler(jsonrpc_client)
         formatter = _log.Formatter(_logc.LOG_FORMAT)
         jsonrcp_log_handler.setFormatter(formatter)
         root_logger = _log.getLogger()
