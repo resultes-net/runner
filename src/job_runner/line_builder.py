@@ -12,10 +12,10 @@ class LineBuilder:
             return []
 
         first_line = self._started_line + continued_line
-        *intermediate_lines, last_stared_line = next_lines
+        *intermediate_lines, last_started_line = next_lines
 
         new_lines = [first_line, *intermediate_lines]
 
-        self._started_line = last_stared_line
+        self._started_line = last_started_line
 
         return new_lines

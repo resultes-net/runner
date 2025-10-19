@@ -2,9 +2,8 @@ import logging as _log
 import pathlib as _pl
 import zipfile as _zf
 
+import resultes_openstack_utils.swift_multithreaded as _sm
 import resultes_pydantic_models.runner as _mrunner
-
-import swift_multithreaded as _sm
 
 from . import executor as _ex
 
@@ -73,7 +72,7 @@ class ResultUploader:
             result_zip_file_path.parent.mkdir(parents=True)
 
         with _zf.ZipFile(
-            result_zip_file_path, compression=_zf.ZIP_LZMA, mode="w"
+            result_zip_file_path, compression=_zf.ZIP_BZIP2, mode="w"
         ) as zip_file:
             for path in sorted_paths:
                 assert path.exists()

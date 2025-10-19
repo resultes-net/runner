@@ -6,11 +6,11 @@ import dataclasses as _dc
 import logging as _log
 
 import resultes_jsonrpc.jsonrpc.client as _rjjc
+import resultes_jsonrpc.jsonrpc.jsonrpc_logging as _jrpcl
 import resultes_jsonrpc.jsonrpc.server as _rjjs
 import resultes_jsonrpc.websockets.types as _rjwt
 
 import context as _con
-import jsonrpc_logging as _jrpcl
 import log_config as _logc
 
 _LOGGER = _log.getLogger(__name__)
