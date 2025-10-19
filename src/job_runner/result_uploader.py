@@ -123,8 +123,11 @@ class ResultUploader:
         return include_paths
 
     def _get_paths(
-        self, glob_patterns: _cabc.Sequence[str]
+        self, glob_patterns: _cabc.Sequence[str] | None
     ) -> _cabc.Sequence[_pl.Path]:
+        if not glob_patterns:
+            return []
+
         paths = [p for g in glob_patterns for p in self._working_dir_path.glob(g)]
 
         sorted_paths = sorted(paths)
