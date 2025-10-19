@@ -72,7 +72,9 @@ class ResultUploader:
         if not result_zip_file_containing_dir_path.is_dir():
             result_zip_file_path.parent.mkdir(parents=True)
 
-        with _zf.ZipFile(result_zip_file_path, mode="w") as zip_file:
+        with _zf.ZipFile(
+            result_zip_file_path, compression=_zf.ZIP_LZMA, mode="w"
+        ) as zip_file:
             for path in sorted_paths:
                 assert path.exists()
 
