@@ -1,6 +1,7 @@
 -c constraints.txt
 
 https://github.com/SPF-OST/pytrnsys/archive/refs/heads/master.zip
+https://github.com/SPF-OST/pytrnsys_process/archive/refs/heads/main.zip
 
 pydantic
 aiohttp
