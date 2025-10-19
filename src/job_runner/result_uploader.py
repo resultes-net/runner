@@ -1,3 +1,4 @@
+import collections.abc as _cabc
 import logging as _log
 import pathlib as _pl
 import zipfile as _zf
@@ -49,16 +50,7 @@ class ResultUploader:
         await self._swift.upload(zip_file_path, result.object_storage_output_file_path)
 
     def _create_zip_file(self, result: _mrunner.MultipleFilesResult) -> _pl.Path:
-        paths = [
-            p for g in result.glob_patterns for p in self._working_dir_path.glob(g)
-        ]
-
-        sorted_paths = sorted(paths)
-
-        formatted_sorted_paths = "\n".join(f"\t{p}" for p in sorted_paths)
-        _LOGGER.debug(
-            "Glob patterns expanded to following paths: %s", formatted_sorted_paths
-        )
+        paths = self._get_globbed_paths(result.glob_patterns)
 
         relative_result_zip_file_path = (
             _pl.PurePath(result.object_storage_output_file_path.container)
@@ -74,7 +66,7 @@ class ResultUploader:
         with _zf.ZipFile(
             result_zip_file_path, compression=_zf.ZIP_BZIP2, mode="w"
         ) as zip_file:
-            for path in sorted_paths:
+            for path in paths:
                 assert path.exists()
 
                 relative_path = path.relative_to(self._working_dir_path)
@@ -106,3 +98,34 @@ class ResultUploader:
         )
 
         return result_zip_file_path
+
+    def _get_globbed_paths(
+        self, glob_patterns: _mrunner.GlobPatterns
+    ) -> _cabc.Sequence[_pl.Path]:
+        include_paths = self._get_paths(glob_patterns.include)
+        formatted_include_paths = "\n".join(f"\t{p}" for p in include_paths)
+        _LOGGER.debug(
+            "Include glob patterns expanded to following paths:\n%s",
+            formatted_include_paths,
+        )
+
+        exclude_paths = self._get_paths(glob_patterns.exclude)
+        formatted_exclude_paths = "\n".join(f"\t{p}" for p in exclude_paths)
+        _LOGGER.debug(
+            "Exclude glob patterns expanded to following paths:\n%s",
+            formatted_exclude_paths,
+        )
+
+        remaining_paths = sorted(set(include_paths) - set(exclude_paths))
+        formatted_remaining_paths = "\n".join(f"\t{p}" for p in remaining_paths)
+        _LOGGER.debug("Remaining, final paths are:\n%s", formatted_remaining_paths)
+
+        return include_paths
+
+    def _get_paths(
+        self, glob_patterns: _cabc.Sequence[str]
+    ) -> _cabc.Sequence[_pl.Path]:
+        paths = [p for g in glob_patterns for p in self._working_dir_path.glob(g)]
+
+        sorted_paths = sorted(paths)
+        return sorted_paths
