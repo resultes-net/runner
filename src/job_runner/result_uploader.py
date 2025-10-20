@@ -63,8 +63,9 @@ class ResultUploader:
         if not result_zip_file_containing_dir_path.is_dir():
             result_zip_file_path.parent.mkdir(parents=True)
 
+        _LOGGER.info("Creating zip file...")
         with _zf.ZipFile(
-            result_zip_file_path, compression=_zf.ZIP_BZIP2, mode="w"
+            result_zip_file_path, compression=_zf.ZIP_DEFLATED, mode="w"
         ) as zip_file:
             for path in paths:
                 assert path.exists()
@@ -91,7 +92,7 @@ class ResultUploader:
         size_mb = round(stat.st_size / 1024 / 1024)
 
         _LOGGER.info(
-            "Zip file %s is %f.2 MB big and contains %i files.",
+            "Creating of zip file completed. It %s is %f.2 MB big and contains %i files.",
             result_zip_file_path,
             size_mb,
             n_files,
