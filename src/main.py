@@ -9,13 +9,13 @@ import signal as _sig
 import typing as _tp
 
 import resultes_jsonrpc.websockets.server as _rjws
+import resultes_openstack_utils.swift_multithreaded as _swmt
 
 import context as _con
 # This module needs to be imported to define the JSON-RPC methods
 import jrpcs_methods as _jrpcm
 import log_config as _logc
 import message_receiver_factories as _facs
-import swift_multithreaded as _swmt
 
 PORT = 3000
 
@@ -31,6 +31,10 @@ LOG_FILE_PATH = _pl.Path(_os.environ.get("LOG_FILE_PATH", DEFAULT_LOG_FILE_PATH)
 DEFAULT_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
 
 JOBS_DIR_PATH = _pl.Path(_os.environ.get("JOBS_DIR_PATH", DEFAULT_JOBS_DIR_PATH))
+
+CLOUDS_YAML_FILE_PATH = _pl.Path(
+    _pl.Path(__file__).parents[1] / "config" / "clouds.yaml"
+)
 
 
 _LOGGER = _log.getLogger(__name__)
@@ -61,7 +65,7 @@ async def main() -> None:
     _LOGGER.info("Jobs dir path: %s", JOBS_DIR_PATH)
 
     with _cf.ThreadPoolExecutor(N_THREADS) as executor:
-        async with _swmt.Swift(executor, MAX_WORKERS) as swift:
+        async with _swmt.Swift(CLOUDS_YAML_FILE_PATH, executor, MAX_WORKERS) as swift:
             try:
                 async with _asyncio.TaskGroup() as task_group:
                     shall_remove_completed_jobs = True
