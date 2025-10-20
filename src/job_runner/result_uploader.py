@@ -110,12 +110,16 @@ class ResultUploader:
             formatted_include_paths,
         )
 
-        exclude_paths = self._get_paths(glob_patterns.exclude)
-        formatted_exclude_paths = "\n".join(f"\t{p}" for p in exclude_paths)
-        _LOGGER.debug(
-            "Exclude glob patterns expanded to following paths:\n%s",
-            formatted_exclude_paths,
-        )
+        if glob_patterns.exclude:
+            exclude_paths = self._get_paths(glob_patterns.exclude)
+            formatted_exclude_paths = "\n".join(f"\t{p}" for p in exclude_paths)
+            _LOGGER.debug(
+                "Exclude glob patterns expanded to following paths:\n%s",
+                formatted_exclude_paths,
+            )
+        else:
+            exclude_paths = list[_pl.Path]()
+            _LOGGER.debug("No exclude patterns were given.")
 
         remaining_paths = sorted(set(include_paths) - set(exclude_paths))
         formatted_remaining_paths = "\n".join(f"\t{p}" for p in remaining_paths)
@@ -124,11 +128,8 @@ class ResultUploader:
         return include_paths
 
     def _get_paths(
-        self, glob_patterns: _cabc.Sequence[str] | None
+        self, glob_patterns: _cabc.Sequence[str]
     ) -> _cabc.Sequence[_pl.Path]:
-        if not glob_patterns:
-            return []
-
         paths = [p for g in glob_patterns for p in self._working_dir_path.glob(g)]
 
         sorted_paths = sorted(paths)
