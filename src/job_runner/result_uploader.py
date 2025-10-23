@@ -93,7 +93,6 @@ class ResultUploader:
 
         _LOGGER.info(
             "...DONE. The created file is %.2f MiB big and contains %i files.",
-            result_zip_file_path,
             size_mb,
             n_files,
         )
