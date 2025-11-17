@@ -1,6 +1,7 @@
 import asyncio as _asyncio
 import collections.abc as _cabc
 import dataclasses as _dc
+import json as _json
 import logging as _log
 import pathlib as _pl
 import shutil as _su
@@ -65,6 +66,8 @@ class JobRunner:
 
         self._working_dir_path = self._job_dir_path / "workdir"
 
+        self._parameters_file_path = self._working_dir_path / "parameters.json"
+
     @property
     def _job_id(self) -> str:
         return self._runner_job.id
@@ -82,6 +85,8 @@ class JobRunner:
 
         await self._executor.run(self._create_directories)
 
+        await self._maybe_save_parameters()
+
         await self._download_input()
 
         await self._run_commands()
@@ -98,21 +103,31 @@ class JobRunner:
 
         return _jrpcs.Success()
 
+    def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
+        augmented_message = f"%s - {message}"
+        _LOGGER.info(augmented_message, self._job_id, *args, **kwargs)
+
     def _create_directories(self):
         self._job_dir_path.mkdir()
         self._downlad_dir_path.mkdir()
         self._upload_dir_path.mkdir()
 
-    def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
-        augmented_message = f"%s - {message}"
-        _LOGGER.info(augmented_message, self._job_id, *args, **kwargs)
+    async def _maybe_save_parameters(self) -> None:
+        parameters = self._runner_job.parameters
+
+        if not parameters:
+            return
+
+        json = _json.dumps(parameters)
+
+        await self._executor.run(self._parameters_file_path.write_text, json)
 
     async def _download_input(
         self,
     ) -> None:
-        downloaded_file_name = self._runner_job.object_storage_input_path.path.split("/")[
-            -1
-        ]
+        downloaded_file_name = self._runner_job.object_storage_input_path.path.split(
+            "/"
+        )[-1]
         downloaded_file_path = self._downlad_dir_path / downloaded_file_name
 
         await self._context.swift.download(
@@ -142,7 +157,11 @@ class JobRunner:
             else self._working_dir_path / command.working_dir
         )
 
-        self._log_info("Running %s in subprocess with full working dir %s...", command, working_dir_path)
+        self._log_info(
+            "Running %s in subprocess with full working dir %s...",
+            command,
+            working_dir_path,
+        )
 
         process = await _asyncio.create_subprocess_exec(
             command.program, *command.args, cwd=working_dir_path, stderr=_sp.PIPE

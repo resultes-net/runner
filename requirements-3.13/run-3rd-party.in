@@ -11,3 +11,5 @@ pyyaml
 
 python-keystoneclient
 python-swiftclient
+
+sympy
