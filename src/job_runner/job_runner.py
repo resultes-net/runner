@@ -110,6 +110,7 @@ class JobRunner:
     def _create_directories(self):
         self._job_dir_path.mkdir()
         self._downlad_dir_path.mkdir()
+        self._working_dir_path.mkdir()
         self._upload_dir_path.mkdir()
 
     async def _maybe_save_parameters(self) -> None:
@@ -118,7 +119,7 @@ class JobRunner:
         if not parameters:
             return
 
-        json = _json.dumps(parameters)
+        json = _json.dumps(parameters, indent=4)
 
         await self._executor.run(self._parameters_file_path.write_text, json)
 
@@ -134,7 +135,6 @@ class JobRunner:
             self._runner_job.object_storage_input_path, downloaded_file_path
         )
 
-        await self._executor.run(self._working_dir_path.mkdir)
         await self._executor.run(_unzip, downloaded_file_path, self._working_dir_path)
 
     async def _run_commands(self) -> None:
