@@ -72,16 +72,18 @@ class JobRunner:
     def _job_id(self) -> str:
         return self._runner_job.id
 
-    async def run(self) -> _jrpcs.Result:
+    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobNotification]:
         self._log_info("Job started.")
 
         job_dir_exists = await self._executor.run(self._job_dir_path.exists)
 
         if job_dir_exists:
-            return _jrpcs.Error(
-                code=_jrpcc.ERROR_SERVER_ERROR,
-                message=f"Have seen job ID {self._job_id} before. Job IDs must be unique, forever.",
+            yield _mrunner.JobNotification.from_error(
+                self._job_id,
+                "Have seen job ID before. Job IDs must be unique, forever.",
             )
+
+            return
 
         await self._executor.run(self._create_directories)
 
@@ -99,9 +101,10 @@ class JobRunner:
             await self._executor.run(_su.rmtree, self._job_dir_path)
 
         if return_paths is not None:
-            return _jrpcs.Success(return_paths)
+            yield _mrunner.JobNotification.from_success_data(self._job_id, return_paths)
+            return
 
-        return _jrpcs.Success()
+        yield _mrunner.JobNotification.from_success_data(self._job_id, return_paths)
 
     def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
         augmented_message = f"%s - {message}"
@@ -149,7 +152,7 @@ class JobRunner:
 
     async def _run_command(
         self,
-        command: _mrunner.Command,
+        command: _mrunner.GeneralCommand,
     ) -> None | _CommandError:
         working_dir_path = (
             command.program.parent

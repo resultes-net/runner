@@ -2,9 +2,7 @@ import asyncio as _asyncio
 import logging as _log
 
 import jsonrpcserver as _jrpcs
-import pydantic as _pyd
-import resultes_jsonrpc.jsonrpc.server as _rjjs
-import resultes_jsonrpc.jsonrpc.types as _rjjt
+import resultes_jsonrpc.jsonrpc.connection as _rjjc
 import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
@@ -18,41 +16,34 @@ def configure() -> None:
     pass
 
 
-@_rjjs.cancellable_async_jrpcs_method
+@_rjjc.cancellable_async_validated_jrpcs_method(_mrunner.RunnerOptions)
 async def set_options(
-    context: _con.Context, runner_options: _rjjt.JsonStructured
+    context: _con.Context, value: _mrunner.RunnerOptions
 ) -> _jrpcs.Result:
-    try:
-        options = _mrunner.RunnerOptions(**runner_options)
-    except _pyd.ValidationError as validation_error:
-        errors = validation_error.errors()
-        return _jrpcs.InvalidParams(errors)
+    _LOGGER.info("Got setup options %s.", value)
 
-    _LOGGER.info("Got setup options %s.", options)
-
-    _LOGGER.info("Setting log level to %s.", options.log_level)
+    _LOGGER.info("Setting log level to %s.", value.log_level)
     root_logger = _log.getLogger()
-    root_logger.setLevel(options.log_level)
+    root_logger.setLevel(value.log_level)
 
-    context.shall_remove_completed_jobs = options.shall_remove_completed_jobs
+    context.shall_remove_completed_jobs = value.shall_remove_completed_jobs
 
     return _jrpcs.Success()
 
 
-@_rjjs.cancellable_async_jrpcs_method
-async def run_job(
-    context: _con.Context, runner_job: _rjjt.JsonStructured
-) -> _jrpcs.Result:
-    try:
-        job = _mrunner.RunnerJob(**runner_job)
-    except _pyd.ValidationError as validation_error:
-        errors = validation_error.errors()
-        return _jrpcs.InvalidParams(errors)
-
-    _LOGGER.info("Running runner job %s.", job.id)
+@_rjjc.cancellable_async_validated_jrpcs_method(_mrunner.RunnerJob)
+async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Result:
+    _LOGGER.info("Running runner job %s.", value.id)
 
     loop = _asyncio.get_running_loop()
 
-    job_runner = _jr.JobRunner(job, context, loop)
+    job_runner = _jr.JobRunner(value, context, loop)
 
-    return await job_runner.run()
+    connection = context.jsonrpc_connection
+
+    async for job_notification in job_runner.run():
+        argument = _rjjc.Argument("job_notification", job_notification)
+
+        await connection.send_notification_base_model("job_notification", argument)
+
+    return _jrpcs.Success()

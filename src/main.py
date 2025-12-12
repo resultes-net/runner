@@ -12,10 +12,11 @@ import resultes_jsonrpc.websockets.server as _rjws
 import resultes_openstack_utils.swift_multithreaded as _swmt
 
 import context as _con
+
 # This module needs to be imported to define the JSON-RPC methods
 import jrpcs_methods as _jrpcm
 import log_config as _logc
-import message_receiver_factories as _facs
+import message_receiver_factory as _facs
 
 PORT = 3000
 
@@ -73,24 +74,21 @@ async def main() -> None:
                         JOBS_DIR_PATH, shall_remove_completed_jobs, swift, executor
                     )
 
-                    logging_message_receiver_factory = (
-                        _facs.LoggingMessageReceiverSingletonFactory(executor)
-                    )
-
-                    request_receiver_factory = _facs.RequestReceiverSingletonFactory(
-                        task_group, context
+                    message_receiver_singleton_factory = (
+                        _facs.MessageReceiverSingletonFactory(
+                            task_group, context, executor
+                        )
                     )
 
                     message_receiver_factories: _cabc.Mapping[
                         str, _rjws.MessageReceiverFactory
                     ] = {
-                        "/requests": request_receiver_factory,
-                        "/logging": logging_message_receiver_factory,
+                        "/jsonrpc": message_receiver_singleton_factory,
                     }
 
                     server = _rjws.Server(PORT, message_receiver_factories)
 
-                    async with server.run(), logging_message_receiver_factory.run():
+                    async with server.run(), message_receiver_singleton_factory.run():
                         await _shutdown_event.wait()
                         await task_group.create_task(_cancel_task_group())
 
