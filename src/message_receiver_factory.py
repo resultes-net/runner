@@ -16,7 +16,7 @@ _LOGGER = _log.getLogger(__name__)
 
 
 @_dc.dataclass
-class _LoggingFactoryPayload:
+class _Payload:
     jsonrpc_connection: _rjjc.Connection
     log_handler: _jrpcl.JsonRpcLogHandler
 
@@ -32,19 +32,19 @@ class MessageReceiverSingletonFactory:
         self._executor = executor
 
         self._dispatcher = _rjjc.AsyncTaskSpawningDispatcher(task_group)
-        self._payload: _LoggingFactoryPayload | None = None
+        self._payload: _Payload | None = None
         self._payload_created_event = _asyncio.Event()
 
     def __call__(self, write_websocket: _rjwt.WriteWebsocket) -> _rjwt.MessageReceiver:
         if self._payload:
-            raise RuntimeError("Logging already connected.")
+            raise RuntimeError("Already connected.")
 
         jsonrpc_connection = _rjjc.Connection(
             self._dispatcher, self._context, write_websocket
         )
         log_handler = self._setup_and_get_log_handler(jsonrpc_connection)
 
-        self._payload = _LoggingFactoryPayload(jsonrpc_connection, log_handler)
+        self._payload = _Payload(jsonrpc_connection, log_handler)
         self._payload_created_event.set()
 
         self._context.set_jsonrpc_connection(jsonrpc_connection)

@@ -41,11 +41,19 @@ async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Re
 
     connection = context.jsonrpc_connection
 
-    async for job_notification in job_runner.run():
-        _LOGGER.debug("Sending notification %s for job %s.", job_notification)
+    try:
+        async for payload in job_runner.run():
+            notification = _mrunner.JobNotification(job_id=value.id, payload=payload)
 
-        await connection.send_notification_base_model(
-            "job_notification", job_notification
+            _LOGGER.debug("Sending notification %s for job %s.", notification)
+
+            await connection.send_notification_base_model(
+                "job_notification", notification
+            )
+    except Exception as exception:
+        notification = _mrunner.JobNotification.from_error(
+            job_id=value.id, error_message=str(exception)
         )
+        await connection.send_notification_base_model("job_notification", notification)
 
     return _jrpcs.Success()

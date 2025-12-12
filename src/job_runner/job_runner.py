@@ -1,6 +1,5 @@
 import asyncio as _asyncio
 import collections.abc as _cabc
-import dataclasses as _dc
 import json as _json
 import logging as _log
 import pathlib as _pl
@@ -8,8 +7,6 @@ import shutil as _su
 import subprocess as _sp
 import typing as _tp
 
-import jsonrpcserver as _jrpcs
-import jsonrpcserver.codes as _jrpcc
 import resultes_pydantic_models.runner as _mrunner
 
 import context as _con
@@ -41,11 +38,6 @@ def _get_return_paths(
     return result_path_strings
 
 
-@_dc.dataclass
-class _CommandError:
-    message: str
-
-
 class JobRunner:
     def __init__(
         self,
@@ -72,18 +64,15 @@ class JobRunner:
     def _job_id(self) -> str:
         return self._runner_job.id
 
-    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobNotification]:
+    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
         self._log_info("Job started.")
 
         job_dir_exists = await self._executor.run(self._job_dir_path.exists)
 
         if job_dir_exists:
-            yield _mrunner.JobNotification.from_error(
-                self._job_id,
+            raise RuntimeError(
                 "Have seen job ID before. Job IDs must be unique, forever.",
             )
-
-            return
 
         await self._executor.run(self._create_directories)
 
@@ -101,10 +90,10 @@ class JobRunner:
             await self._executor.run(_su.rmtree, self._job_dir_path)
 
         if return_paths is not None:
-            yield _mrunner.JobNotification.from_success_data(self._job_id, return_paths)
+            yield _mrunner.JobSuccess(result=return_paths)
             return
 
-        yield _mrunner.JobNotification.from_success_data(self._job_id, return_paths)
+        yield _mrunner.JobSuccess()
 
     def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
         augmented_message = f"%s - {message}"
@@ -142,18 +131,12 @@ class JobRunner:
 
     async def _run_commands(self) -> None:
         for command in self._runner_job.commands:
-            error = await self._run_command(command)
-
-            if error:
-                raise _jrpcs.JsonRpcError(
-                    code=_jrpcc.ERROR_SERVER_ERROR,
-                    message=f"Job program exited with non-zero exit code: {error.message}",
-                )
+            await self._run_command(command)
 
     async def _run_command(
         self,
         command: _mrunner.GeneralCommand,
-    ) -> None | _CommandError:
+    ) -> None:
         working_dir_path = (
             command.program.parent
             if command.working_dir is None
@@ -193,9 +176,7 @@ class JobRunner:
                 stderr,
             )
 
-            return _CommandError(stderr)
-
-        return None
+            raise RuntimeError(f"An error occurred running command {command}: {stderr}")
 
     async def _upload_results(
         self,
