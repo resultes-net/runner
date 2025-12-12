@@ -51,9 +51,14 @@ async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Re
                 "job_notification", notification
             )
     except Exception as exception:
+        error_message = str(exception)
+
+        _LOGGER.error("An error occurred running job %s: %s", value.id, error_message)
+
         notification = _mrunner.JobNotification.from_error(
-            job_id=value.id, error_message=str(exception)
+            job_id=value.id, error_message=error_message
         )
+
         await connection.send_notification_base_model("job_notification", notification)
 
     return _jrpcs.Success()
