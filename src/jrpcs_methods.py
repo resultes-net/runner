@@ -42,8 +42,10 @@ async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Re
     connection = context.jsonrpc_connection
 
     async for job_notification in job_runner.run():
-        argument = _rjjc.Argument("job_notification", job_notification)
+        _LOGGER.debug("Sending notification %s for job %s.", job_notification)
 
-        await connection.send_notification_base_model("job_notification", argument)
+        await connection.send_notification_base_model(
+            "job_notification", job_notification
+        )
 
     return _jrpcs.Success()
