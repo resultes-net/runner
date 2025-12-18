@@ -4,16 +4,18 @@ import json as _json
 import logging as _log
 import pathlib as _pl
 import shutil as _su
-import subprocess as _sp
 import typing as _tp
 
 import resultes_pydantic_models.runner as _mrunner
+import resultes_pydantic_models.simulations.parameters as _rpsp
 
 import context as _con
 
 from . import executor as _ex
-from . import process_waiter as _pw
 from . import result_uploader as _ru
+from .process import log_forwarder as _lf
+from .process import process as _proc
+from .process import progress_forwarder as _pf
 
 _LOGGER = _log.getLogger(__name__)
 
@@ -80,7 +82,8 @@ class JobRunner:
 
         await self._download_input()
 
-        await self._run_commands()
+        async for payload in self._run_commands():
+            yield payload
 
         await self._upload_results()
 
@@ -129,54 +132,127 @@ class JobRunner:
 
         await self._executor.run(_unzip, downloaded_file_path, self._working_dir_path)
 
-    async def _run_commands(self) -> None:
-        for command in self._runner_job.commands:
-            await self._run_command(command)
+    async def _run_commands(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+        for command_number, command in enumerate(self._runner_job.commands):
+            async for payload in self._run_command(command, command_number):
+                yield payload
 
     async def _run_command(
         self,
-        command: _mrunner.GeneralCommand,
-    ) -> None:
-        working_dir_path = (
-            command.program.parent
-            if command.working_dir is None
-            else self._working_dir_path / command.working_dir
+        command: _mrunner.GeneralCommand | _mrunner.RunTrnsysCommand,
+        command_number: int,
+    ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+        match command:
+            case _mrunner.GeneralCommand():
+                iterable = self._run_general_command(command, command_number)
+            case _mrunner.RunTrnsysCommand():
+                iterable = self._run_trnsys_command(command, command_number)
+            case _:
+                _tp.assert_never(_)
+
+        async for payload in iterable:
+            yield payload
+
+    async def _run_trnsys_command(
+        self, trnsys_command: _mrunner.RunTrnsysCommand, command_number: int
+    ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+
+        deck_file_path = self._working_dir_path / trnsys_command.relative_dck_file_path
+
+        self._log_info("Running TRNSYS in subprocess with deck file %s", deck_file_path)
+
+        working_dir_path = deck_file_path.parent
+        log_file_path = deck_file_path.with_suffix(".log")
+
+        log_forwarder = _lf.LogForwarder(
+            self._job_id, command_number, log_file_path, self._executor
+        )
+
+        progress_forwarder = self._create_progress_forwarder(
+            working_dir_path, trnsys_command, command_number
+        )
+
+        process = _proc.Process(
+            self._job_id,
+            trnsys_command.trnsys_exe_path,
+            [str(deck_file_path)],
+            working_dir_path,
+            run_alongs=[log_forwarder, progress_forwarder],
+        )
+
+        async for payload in process.run():
+            yield payload
+
+    def _create_progress_forwarder(
+        self,
+        working_dir_path: _pl.Path,
+        trnsys_command: _mrunner.RunTrnsysCommand,
+        command_number: int,
+    ) -> _pf.ProgressForwarder:
+        n_total_time_steps = self._get_n_total_time_steps()
+
+        temperatures_step_prt_file_path = (
+            working_dir_path.parent
+            / trnsys_command.relative_temperatures_step_prt_file_path
+        )
+
+        progress_forwarder = _pf.ProgressForwarder(
+            self._job_id,
+            command_number,
+            n_total_time_steps,
+            temperatures_step_prt_file_path,
+            self._executor,
+        )
+
+        return progress_forwarder
+
+    def _get_n_total_time_steps(self):
+        if not self._runner_job.parameters:
+            raise RuntimeError(
+                "Asked to run TRNSYS command but no parameters were provided."
+            )
+
+        parameters = _rpsp.Parameters(**self._runner_job.parameters)
+
+        n_total_time_steps = parameters.values.time.n_steps
+        return n_total_time_steps
+
+    async def _run_general_command(
+        self, general_command: _mrunner.GeneralCommand, command_number: int
+    ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+        working_dir_path = _pl.Path(
+            general_command.program.parent
+            if general_command.working_dir is None
+            else self._working_dir_path / general_command.working_dir
         )
 
         self._log_info(
             "Running %s in subprocess with full working dir %s...",
-            command,
+            general_command,
             working_dir_path,
         )
 
-        process = await _asyncio.create_subprocess_exec(
-            command.program, *command.args, cwd=working_dir_path, stderr=_sp.PIPE
+        relative_log_file_path = general_command.relative_log_file_path
+
+        log_file_path = (
+            self._working_dir_path / relative_log_file_path
+            if relative_log_file_path
+            else None
         )
 
-        process_waiter = _pw.ProcessWaiter(
+        log_forwarder = _lf.LogForwarder(
+            self._job_id, command_number, log_file_path, self._executor
+        )
+        process = _proc.Process(
             self._job_id,
-            process,
-            self._working_dir_path,
-            command.relative_log_file_path,
+            general_command.program,
+            general_command.args,
+            working_dir_path,
+            run_alongs=[log_forwarder],
         )
 
-        return_code = await process_waiter.wait()
-
-        self._log_info("Done.")
-
-        if return_code != 0:
-            assert process.stderr
-            stderr_bytes = await process.stderr.read()
-            stderr = stderr_bytes.decode()
-
-            _LOGGER.warning(
-                "%s - An error occurred running command %s: '%s'.",
-                self._job_id,
-                command,
-                stderr,
-            )
-
-            raise RuntimeError(f"An error occurred running command {command}: {stderr}")
+        async for payload in process.run():
+            yield payload
 
     async def _upload_results(
         self,
