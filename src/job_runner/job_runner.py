@@ -7,7 +7,6 @@ import shutil as _su
 import typing as _tp
 
 import resultes_pydantic_models.runner as _mrunner
-import resultes_pydantic_models.simulations.parameters as _rpsp
 
 import context as _con
 
@@ -189,8 +188,6 @@ class JobRunner:
         trnsys_command: _mrunner.RunTrnsysCommand,
         command_number: int,
     ) -> _pf.ProgressForwarder:
-        n_total_time_steps = self._get_n_total_time_steps()
-
         temperatures_step_prt_file_path = (
             working_dir_path.parent
             / trnsys_command.relative_temperatures_step_prt_file_path
@@ -199,23 +196,12 @@ class JobRunner:
         progress_forwarder = _pf.ProgressForwarder(
             self._job_id,
             command_number,
-            n_total_time_steps,
+            trnsys_command.n_total_timesteps,
             temperatures_step_prt_file_path,
             self._executor,
         )
 
         return progress_forwarder
-
-    def _get_n_total_time_steps(self):
-        if not self._runner_job.parameters:
-            raise RuntimeError(
-                "Asked to run TRNSYS command but no parameters were provided."
-            )
-
-        parameters = _rpsp.Parameters(**self._runner_job.parameters)
-
-        n_total_time_steps = parameters.values.time.n_steps
-        return n_total_time_steps
 
     async def _run_general_command(
         self, general_command: _mrunner.GeneralCommand, command_number: int
