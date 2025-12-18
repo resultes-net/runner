@@ -41,6 +41,7 @@ class ProgressForwarder(_proc.RunAlongBase):
             self._job_id, self._time_step_prt_file_path, seconds_to_wait, self._executor
         )
         if not was_log_file_created:
+            yield
             return
 
         coroutine = self._progress_forwarder(queue)

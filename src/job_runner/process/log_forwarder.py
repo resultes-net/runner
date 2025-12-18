@@ -41,6 +41,7 @@ class LogForwarder(_proc.RunAlongBase):
     @_ctx.asynccontextmanager
     async def run_along(self, queue: _proc.Queue) -> _cabc.AsyncIterator[None]:
         if not self._log_file_path_or_none:
+            yield
             return
 
         seconds_to_wait = 10.0
@@ -49,6 +50,7 @@ class LogForwarder(_proc.RunAlongBase):
             self._job_id, self._log_file_path, seconds_to_wait, self._executor
         )
         if not was_log_file_created:
+            yield
             return
 
         log_file_reader_task = _asyncio.create_task(self._log_file_reader(queue))
@@ -82,7 +84,10 @@ class LogForwarder(_proc.RunAlongBase):
 
     @_tp.override
     async def check_error_and_possibly_raise(self) -> None:
-        if not await self._executor.run(self._log_file_path.is_file):
+        if not self._log_file_path_or_none:
+            return
+
+        if not await self._executor.run(self._log_file_path_or_none.is_file):
             raise RuntimeError(
-                f"{self._job_id} - Unexpectedly, log file {self._log_file_path} has not been created."
+                f"{self._job_id} - Unexpectedly, log file {self._log_file_path_or_none} has not been created."
             )

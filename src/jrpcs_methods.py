@@ -1,5 +1,6 @@
 import asyncio as _asyncio
 import logging as _log
+import traceback as _tb
 
 import jsonrpcserver as _jrpcs
 import resultes_jsonrpc.jsonrpc.connection as _rjjc
@@ -45,13 +46,13 @@ async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Re
         async for payload in job_runner.run():
             notification = _mrunner.JobNotification(job_id=value.id, payload=payload)
 
-            _LOGGER.debug("Sending notification %s for job %s.", notification)
+            _LOGGER.debug("Sending notification %s for job %s.", notification, value.id)
 
             await connection.send_notification_base_model(
                 "job_notification", notification
             )
     except Exception as exception:
-        error_message = str(exception)
+        error_message = "".join(_tb.format_exception(exception))
 
         _LOGGER.error("An error occurred running job %s: %s", value.id, error_message)
 

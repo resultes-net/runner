@@ -156,7 +156,7 @@ class JobRunner:
         self, trnsys_command: _mrunner.RunTrnsysCommand, command_number: int
     ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
 
-        deck_file_path = self._working_dir_path / trnsys_command.relative_dck_file_path
+        deck_file_path = self._working_dir_path / trnsys_command.relative_deck_file_path
 
         self._log_info("Running TRNSYS in subprocess with deck file %s", deck_file_path)
 

@@ -50,20 +50,19 @@ class Process:
         self._queue = _asyncio.Queue[_mrunner.JobSuccessfulPayload | _ProcessDone]()
 
     async def run(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
-        async with self._run_run_alongs():
+        process = await _asyncio.create_subprocess_exec(
+            self._program,
+            *self._args,
+            cwd=self._working_dir_path,
+            stderr=_asp.PIPE,
+        )
 
+        async with self._run_run_alongs():
             _LOGGER.info(
-                "%s - Running %s with args %s in working dir %s...",
+                "Running %s with args %s in working dir %s...",
                 self._program,
                 self._args,
                 self._working_dir_path,
-            )
-
-            process = await _asyncio.create_subprocess_exec(
-                self._program,
-                *self._args,
-                cwd=self._working_dir_path,
-                stderr=_asp.PIPE,
             )
 
             coroutine = self._wait_for_process(process)
@@ -95,7 +94,7 @@ class Process:
             )
 
         for run_along in self._run_alongs:
-            run_along.check_error_and_possibly_raise()
+            await run_along.check_error_and_possibly_raise()
 
     @_ctx.asynccontextmanager
     async def _run_run_alongs(self) -> _cabc.AsyncIterator[None]:
