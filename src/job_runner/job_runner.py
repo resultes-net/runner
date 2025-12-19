@@ -43,6 +43,7 @@ def _get_return_paths(
 @_dc.dataclass
 class Config:
     jobs_dir_path: _pl.Path
+    log_level: int
     executor: _cf.Executor
     swift: _swift.Swift
     shall_remove_completed_jobs: bool
@@ -166,9 +167,7 @@ class JobRunner:
 
         log_file_path = deck_file_path.with_suffix(".log")
 
-        log_forwarder = _lf.LogForwarder(
-            self.job_id, command_number, log_file_path, self._executor
-        )
+        log_forwarder = self._create_log_forwarder(command_number, log_file_path)
 
         temperatures_step_prt_file_path = (
             self._working_dir_path
@@ -218,9 +217,8 @@ class JobRunner:
             else None
         )
 
-        log_forwarder = _lf.LogForwarder(
-            self.job_id, command_number, log_file_path, self._executor
-        )
+        log_forwarder = self._create_log_forwarder(command_number, log_file_path)
+
         process = _proc.Process(
             self.job_id,
             general_command.program,
@@ -231,6 +229,19 @@ class JobRunner:
 
         async for payload in process.run():
             yield payload
+
+    def _create_log_forwarder(
+        self, command_number: int, log_file_path: _pl.Path | None
+    ) -> _lf.LogForwarder:
+        log_forwarder = _lf.LogForwarder(
+            self.job_id,
+            command_number,
+            log_file_path,
+            self._config.log_level,
+            self._executor,
+        )
+
+        return log_forwarder
 
     async def _upload_results(
         self,

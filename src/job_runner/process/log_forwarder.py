@@ -21,11 +21,13 @@ class LogForwarder(_proc.RunAlongBase):
         job_id: str,
         command_number: int,
         log_file_path: _pl.Path | None,
+        log_level: int,
         executor: _ex.Executor,
     ) -> None:
         self._job_id = job_id
         self._command_number = command_number
         self._log_file_path_or_none = log_file_path
+        self._log_level = log_level
         self._executor = executor
 
         self._shall_stop = False
@@ -71,7 +73,7 @@ class LogForwarder(_proc.RunAlongBase):
                 for new_line in new_lines:
                     message = f"{self._log_file_path.name} - {new_line}"
                     log_message = _mrunner.LogMessage(
-                        level=_log.INFO,
+                        level=self._log_level,
                         message=message,
                         command_number=self._command_number,
                     )

@@ -26,6 +26,8 @@ async def set_options(
     root_logger = _log.getLogger()
     root_logger.setLevel(value.log_level)
 
+    context.job_runner_config.log_level = root_logger.level
+
     context.job_runner_config.shall_remove_completed_jobs = (
         value.shall_remove_completed_jobs
     )
