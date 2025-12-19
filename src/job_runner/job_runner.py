@@ -186,7 +186,7 @@ class JobRunner:
         process = _proc.Process(
             self.job_id,
             trnsys_command.trnsys_exe_path,
-            [str(deck_file_path)],
+            [deck_file_path.name, "/N"],
             trnsys_process_working_dir_path,
             run_alongs=[log_forwarder, progress_forwarder],
         )
