@@ -39,13 +39,13 @@ class Process:
         program: _pl.PureWindowsPath,
         args: _cabc.Sequence[str],
         working_dir_path: _pl.Path,
-        run_alongs: _cabc.Sequence[RunAlongBase],
+        run_alongs: _cabc.Sequence[RunAlongBase] | None = None,
     ) -> None:
         self._job_id = job_id
         self._program = program
         self._args = args
         self._working_dir_path = working_dir_path
-        self._run_alongs = run_alongs
+        self._run_alongs = run_alongs if run_alongs else list[RunAlongBase]()
 
         self._queue = _asyncio.Queue[_mrunner.JobSuccessfulPayload | _ProcessDone]()
 

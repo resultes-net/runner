@@ -163,12 +163,6 @@ class JobRunner:
 
         deck_file_path = self._working_dir_path / trnsys_command.relative_deck_file_path
 
-        self._log_info("Running TRNSYS in subprocess with deck file %s", deck_file_path)
-
-        log_file_path = deck_file_path.with_suffix(".log")
-
-        log_forwarder = self._create_log_forwarder(command_number, log_file_path)
-
         temperatures_step_prt_file_path = (
             self._working_dir_path
             / trnsys_command.relative_temperatures_step_prt_file_path
@@ -182,6 +176,15 @@ class JobRunner:
             self._executor,
         )
 
+        run_alongs: list[_proc.RunAlongBase] = [progress_forwarder]
+
+        log_file_path = deck_file_path.with_suffix(".log")
+
+        log_forwarder = self._create_log_forwarder(command_number, log_file_path)
+        if self._config.log_level <= _log.DEBUG:
+            log_forwarder = self._create_log_forwarder(command_number, log_file_path)
+            run_alongs.append(log_forwarder)
+
         trnsys_process_working_dir_path = deck_file_path.parent
         process = _proc.Process(
             self.job_id,
@@ -190,6 +193,8 @@ class JobRunner:
             trnsys_process_working_dir_path,
             run_alongs=[log_forwarder, progress_forwarder],
         )
+
+        self._log_info("Running TRNSYS in subprocess with deck file %s", deck_file_path)
 
         async for payload in process.run():
             yield payload
@@ -217,14 +222,18 @@ class JobRunner:
             else None
         )
 
-        log_forwarder = self._create_log_forwarder(command_number, log_file_path)
+        run_alongs = list[_proc.RunAlongBase]()
+
+        if self._config.log_level <= _log.DEBUG:
+            log_forwarder = self._create_log_forwarder(command_number, log_file_path)
+            run_alongs.append(log_forwarder)
 
         process = _proc.Process(
             self.job_id,
             general_command.program,
             general_command.args,
             working_dir_path,
-            run_alongs=[log_forwarder],
+            run_alongs,
         )
 
         async for payload in process.run():
@@ -237,7 +246,7 @@ class JobRunner:
             self.job_id,
             command_number,
             log_file_path,
-            self._config.log_level,
+            _log.DEBUG,
             self._executor,
         )
 
