@@ -90,7 +90,7 @@ jobs:
 
       - name: Unzip NSSM
         run: |
-          Expand-Archive -Path nssm-2.24.zip
+          Expand-Archive -Path .\contents\nssm-2.24.zip
 
       - name: Move NSSM folder to 'E:'
         run: |
