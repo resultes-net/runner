@@ -29,7 +29,7 @@ async def is_file_created_within(
         await _asyncio.sleep(sleep_seconds)
 
     _LOGGER.error(
-        "Log file %s was not created after %f seconds.",
+        "File %s was not created after %f seconds.",
         file_path,
         delta.total_seconds(),
     )

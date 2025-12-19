@@ -64,7 +64,7 @@ class LogForwarder(_proc.RunAlongBase):
     async def _log_file_reader(self, queue: _proc.Queue) -> None:
         line_builder = _lb.LineBuilder()
         with self._log_file_path.open("rt") as log_file:
-            _LOGGER.info("Start reading from log file %s...", self._log_file_path)
+            _LOGGER.info("Start reading from file %s...", self._log_file_path)
             while not self._shall_stop:
                 bytes = await self._executor.run(log_file.read)
                 new_lines = line_builder.add_bytes_and_get_new_lines(bytes)

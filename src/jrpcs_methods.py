@@ -1,4 +1,3 @@
-import asyncio as _asyncio
 import logging as _log
 import traceback as _tb
 
@@ -27,7 +26,9 @@ async def set_options(
     root_logger = _log.getLogger()
     root_logger.setLevel(value.log_level)
 
-    context.shall_remove_completed_jobs = value.shall_remove_completed_jobs
+    context.job_runner_config.shall_remove_completed_jobs = (
+        value.shall_remove_completed_jobs
+    )
 
     return _jrpcs.Success()
 
@@ -36,17 +37,28 @@ async def set_options(
 async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Result:
     _LOGGER.info("Running runner job %s.", value.id)
 
-    loop = _asyncio.get_running_loop()
-
-    job_runner = _jr.JobRunner(value, context, loop)
+    job_runner = _jr.JobRunner(
+        value,
+        context.job_runner_config,
+    )
 
     connection = context.jsonrpc_connection
 
+    coroutine = _run_job_in_new_task(job_runner, connection)
+
+    context.task_group.create_task(coroutine)
+
+    return _jrpcs.Success()
+
+
+async def _run_job_in_new_task(job_runner: _jr.JobRunner, connection: _rjjc.Connection):
+    job_id = job_runner.job_id
+
     try:
         async for payload in job_runner.run():
-            notification = _mrunner.JobNotification(job_id=value.id, payload=payload)
+            notification = _mrunner.JobNotification(job_id=job_id, payload=payload)
 
-            _LOGGER.debug("Sending notification %s for job %s.", notification, value.id)
+            _LOGGER.debug("Sending notification %s for job %s.", notification, job_id)
 
             await connection.send_notification_base_model(
                 "job_notification", notification
@@ -54,12 +66,10 @@ async def run_job(context: _con.Context, value: _mrunner.RunnerJob) -> _jrpcs.Re
     except Exception as exception:
         error_message = "".join(_tb.format_exception(exception))
 
-        _LOGGER.error("An error occurred running job %s: %s", value.id, error_message)
+        _LOGGER.error("An error occurred running job %s: %s", job_id, error_message)
 
         notification = _mrunner.JobNotification.from_error(
-            job_id=value.id, error_message=error_message
+            job_id=job_id, error_message=error_message
         )
 
         await connection.send_notification_base_model("job_notification", notification)
-
-    return _jrpcs.Success()

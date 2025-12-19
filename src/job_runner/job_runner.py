@@ -1,14 +1,15 @@
 import asyncio as _asyncio
 import collections.abc as _cabc
+import concurrent.futures as _cf
+import dataclasses as _dc
 import json as _json
 import logging as _log
 import pathlib as _pl
 import shutil as _su
 import typing as _tp
 
+import resultes_openstack_utils.swift_multithreaded as _swift
 import resultes_pydantic_models.runner as _mrunner
-
-import context as _con
 
 from . import executor as _ex
 from . import result_uploader as _ru
@@ -39,20 +40,23 @@ def _get_return_paths(
     return result_path_strings
 
 
+@_dc.dataclass
+class Config:
+    jobs_dir_path: _pl.Path
+    executor: _cf.Executor
+    swift: _swift.Swift
+    shall_remove_completed_jobs: bool
+
+
 class JobRunner:
-    def __init__(
-        self,
-        runner_job: _mrunner.RunnerJob,
-        context: _con.Context,
-        loop: _asyncio.AbstractEventLoop,
-    ) -> None:
+    def __init__(self, runner_job: _mrunner.RunnerJob, config: Config) -> None:
         self._runner_job = runner_job
-        self._context = context
-        self._loop = loop
+        self._config = config
 
-        self._executor = _ex.Executor(self._loop, self._context.executor)
+        self._job_dir_path = self._config.jobs_dir_path / self._runner_job.id
 
-        self._job_dir_path = context.jobs_dir_path / self._runner_job.id
+        loop = _asyncio.get_running_loop()
+        self._executor = _ex.Executor(loop, self._config.executor)
 
         self._downlad_dir_path = self._job_dir_path / "download"
         self._upload_dir_path = self._job_dir_path / "upload"
@@ -62,7 +66,7 @@ class JobRunner:
         self._parameters_file_path = self._working_dir_path / "parameters.json"
 
     @property
-    def _job_id(self) -> str:
+    def job_id(self) -> str:
         return self._runner_job.id
 
     async def run(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
@@ -88,7 +92,7 @@ class JobRunner:
 
         return_paths = await self._get_return_paths()
 
-        if self._context.shall_remove_completed_jobs:
+        if self._config.shall_remove_completed_jobs:
             await self._executor.run(_su.rmtree, self._job_dir_path)
 
         if return_paths is not None:
@@ -99,7 +103,7 @@ class JobRunner:
 
     def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
         augmented_message = f"%s - {message}"
-        _LOGGER.info(augmented_message, self._job_id, *args, **kwargs)
+        _LOGGER.info(augmented_message, self.job_id, *args, **kwargs)
 
     def _create_directories(self):
         self._job_dir_path.mkdir()
@@ -125,7 +129,7 @@ class JobRunner:
         )[-1]
         downloaded_file_path = self._downlad_dir_path / downloaded_file_name
 
-        await self._context.swift.download(
+        await self._config.swift.download(
             self._runner_job.object_storage_input_path, downloaded_file_path
         )
 
@@ -160,48 +164,36 @@ class JobRunner:
 
         self._log_info("Running TRNSYS in subprocess with deck file %s", deck_file_path)
 
-        working_dir_path = deck_file_path.parent
         log_file_path = deck_file_path.with_suffix(".log")
 
         log_forwarder = _lf.LogForwarder(
-            self._job_id, command_number, log_file_path, self._executor
+            self.job_id, command_number, log_file_path, self._executor
         )
 
-        progress_forwarder = self._create_progress_forwarder(
-            working_dir_path, trnsys_command, command_number
-        )
-
-        process = _proc.Process(
-            self._job_id,
-            trnsys_command.trnsys_exe_path,
-            [str(deck_file_path)],
-            working_dir_path,
-            run_alongs=[log_forwarder, progress_forwarder],
-        )
-
-        async for payload in process.run():
-            yield payload
-
-    def _create_progress_forwarder(
-        self,
-        working_dir_path: _pl.Path,
-        trnsys_command: _mrunner.RunTrnsysCommand,
-        command_number: int,
-    ) -> _pf.ProgressForwarder:
         temperatures_step_prt_file_path = (
-            working_dir_path.parent
+            self._working_dir_path
             / trnsys_command.relative_temperatures_step_prt_file_path
         )
 
         progress_forwarder = _pf.ProgressForwarder(
-            self._job_id,
+            self.job_id,
             command_number,
             trnsys_command.n_total_timesteps,
             temperatures_step_prt_file_path,
             self._executor,
         )
 
-        return progress_forwarder
+        trnsys_process_working_dir_path = deck_file_path.parent
+        process = _proc.Process(
+            self.job_id,
+            trnsys_command.trnsys_exe_path,
+            [str(deck_file_path)],
+            trnsys_process_working_dir_path,
+            run_alongs=[log_forwarder, progress_forwarder],
+        )
+
+        async for payload in process.run():
+            yield payload
 
     async def _run_general_command(
         self, general_command: _mrunner.GeneralCommand, command_number: int
@@ -227,10 +219,10 @@ class JobRunner:
         )
 
         log_forwarder = _lf.LogForwarder(
-            self._job_id, command_number, log_file_path, self._executor
+            self.job_id, command_number, log_file_path, self._executor
         )
         process = _proc.Process(
-            self._job_id,
+            self.job_id,
             general_command.program,
             general_command.args,
             working_dir_path,
@@ -246,7 +238,7 @@ class JobRunner:
         result_uploader = _ru.ResultUploader(
             self._working_dir_path,
             self._upload_dir_path,
-            self._context.swift,
+            self._config.swift,
             self._executor,
         )
 

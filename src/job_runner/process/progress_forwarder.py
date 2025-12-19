@@ -60,10 +60,11 @@ class ProgressForwarder(_proc.RunAlongBase):
         line_builder = _lb.LineBuilder()
         with self._time_step_prt_file_path.open("rt") as prt_file:
             _LOGGER.info(
-                "Start reading from log file %s...", self._time_step_prt_file_path
+                "Start reading from file %s...", self._time_step_prt_file_path
             )
 
             n_lines = 0
+            progress = 0
             while not self._shall_stop:
                 bytes = await self._executor.run(prt_file.read)
                 new_lines = line_builder.add_bytes_and_get_new_lines(bytes)
@@ -74,12 +75,15 @@ class ProgressForwarder(_proc.RunAlongBase):
 
                     n_time_steps = n_lines - 1
 
-                    progress = round(n_time_steps / self._n_total_time_steps * 100)
+                    new_progress = round(n_time_steps / self._n_total_time_steps * 100)
 
-                    job_progress = _mrunner.JobProgress(
-                        progress=progress, command_number=self._command_number
-                    )
-                    await queue.put(job_progress)
+                    if new_progress > progress:
+                        job_progress = _mrunner.JobProgress(
+                            progress=progress, command_number=self._command_number
+                        )
+                        await queue.put(job_progress)
+
+                        progress = new_progress
 
                 sleep_seconds = 1.0
                 await _asyncio.sleep(sleep_seconds)

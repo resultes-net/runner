@@ -1,24 +1,16 @@
-import concurrent.futures as _cf
-import dataclasses as _dc
-import pathlib as _pl
+import asyncio as _asyncio
 
 import resultes_jsonrpc.jsonrpc.connection as _rjjc
-import resultes_openstack_utils.swift_multithreaded as _swmt
+
+import job_runner.job_runner as _jr
 
 
-@_dc.dataclass
 class Context:
     def __init__(
-        self,
-        jobs_dir_path: _pl.Path,
-        shall_remove_completed_jobs: bool,
-        swift: _swmt.Swift,
-        executor: _cf.Executor,
+        self, task_group: _asyncio.TaskGroup, job_runner_config: _jr.Config
     ) -> None:
-        self.jobs_dir_path = jobs_dir_path
-        self.shall_remove_completed_jobs = shall_remove_completed_jobs
-        self.swift = swift
-        self.executor = executor
+        self.task_group = task_group
+        self.job_runner_config = job_runner_config
 
         self._jsonrpc_connection: _rjjc.Connection | None = None
 

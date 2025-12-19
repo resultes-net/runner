@@ -12,7 +12,7 @@ import resultes_jsonrpc.websockets.server as _rjws
 import resultes_openstack_utils.swift_multithreaded as _swmt
 
 import context as _con
-
+import job_runner.job_runner as _jr
 # This module needs to be imported to define the JSON-RPC methods
 import jrpcs_methods as _jrpcm
 import log_config as _logc
@@ -70,9 +70,11 @@ async def main() -> None:
             try:
                 async with _asyncio.TaskGroup() as task_group:
                     shall_remove_completed_jobs = True
-                    context = _con.Context(
-                        JOBS_DIR_PATH, shall_remove_completed_jobs, swift, executor
+                    job_runner_config = _jr.Config(
+                        JOBS_DIR_PATH, executor, swift, shall_remove_completed_jobs
                     )
+
+                    context = _con.Context(task_group, job_runner_config)
 
                     message_receiver_singleton_factory = (
                         _facs.MessageReceiverSingletonFactory(
