@@ -82,12 +82,6 @@ jobs:
         run: |
           mv .\TRNSYS18_resultes\TRNSYS18 E:\
 
-      - name: Download NSSM
-        run: |
-            $ProgressPreference="SilentlyContinue"
-            Invoke-WebRequest -Uri https://nssm.cc/release/nssm-2.24.zip -OutFile nssm-2.24.zip
-            $ProgressPreference="Continue"
-
       - name: Unzip NSSM
         run: |
           Expand-Archive -Path .\contents\nssm-2.24.zip
