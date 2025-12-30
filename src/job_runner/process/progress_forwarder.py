@@ -78,12 +78,14 @@ class ProgressForwarder(_proc.RunAlongBase):
                     new_progress = round(n_time_steps / self._n_total_time_steps * 100)
 
                     if new_progress > progress:
+                        progress = new_progress
+
                         job_progress = _mrunner.JobProgress(
                             progress=progress, command_number=self._command_number
                         )
+
                         await queue.put(job_progress)
 
-                        progress = new_progress
 
                 if self._shall_stop:
                     break
