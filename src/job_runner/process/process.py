@@ -75,7 +75,10 @@ class Process:
                     case _:
                         yield payload
 
-            return_code = await process.wait()
+        for payload in self._flush_queue():
+            yield payload
+
+        return_code = await process.wait()
 
         if return_code != 0:
             assert process.stderr
@@ -108,3 +111,11 @@ class Process:
     async def _wait_for_process(self, process: _asp.Process) -> None:
         await process.wait()
         await self._queue.put(_ProcessDone())
+
+    def _flush_queue(self) -> _cabc.Iterator[_mrunner.JobSuccessfulPayload]:
+        try:
+            while payload := self._queue.get_nowait():
+                assert not isinstance(payload, _ProcessDone)
+                yield payload
+        except _asyncio.QueueEmpty:
+            pass
