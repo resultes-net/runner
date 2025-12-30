@@ -72,8 +72,10 @@ class ProgressForwarder(_proc.RunAlongBase):
                 n_new_lines = len(new_lines)
                 if n_new_lines > 0:
                     n_lines += n_new_lines
-
-                    n_time_steps = n_lines - 1
+                    
+                    # -1 for the header line and another -1 for the second line, giving
+                    # the values at simulation start time.
+                    n_time_steps = n_lines - 2
 
                     new_progress = round(n_time_steps / self._n_total_time_steps * 100)
 
