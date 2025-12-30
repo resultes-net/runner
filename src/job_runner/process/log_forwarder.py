@@ -67,7 +67,8 @@ class LogForwarder(_proc.RunAlongBase):
         line_builder = _lb.LineBuilder()
         with self._log_file_path.open("rt") as log_file:
             _LOGGER.info("Start reading from file %s...", self._log_file_path)
-            while not self._shall_stop:
+
+            while True:
                 bytes = await self._executor.run(log_file.read)
                 new_lines = line_builder.add_bytes_and_get_new_lines(bytes)
                 for new_line in new_lines:
@@ -78,6 +79,9 @@ class LogForwarder(_proc.RunAlongBase):
                         command_number=self._command_number,
                     )
                     await queue.put(log_message)
+
+                if self._shall_stop:
+                    break
 
                 sleep_seconds = 1.0
                 await _asyncio.sleep(sleep_seconds)

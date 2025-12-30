@@ -59,20 +59,18 @@ class ProgressForwarder(_proc.RunAlongBase):
     async def _progress_forwarder(self, queue: _proc.Queue) -> None:
         line_builder = _lb.LineBuilder()
         with self._time_step_prt_file_path.open("rt") as prt_file:
-            _LOGGER.info(
-                "Start reading from file %s...", self._time_step_prt_file_path
-            )
+            _LOGGER.info("Start reading from file %s...", self._time_step_prt_file_path)
 
             n_lines = 0
             progress = 0
-            while not self._shall_stop:
+            while True:
                 bytes = await self._executor.run(prt_file.read)
                 new_lines = line_builder.add_bytes_and_get_new_lines(bytes)
 
                 n_new_lines = len(new_lines)
                 if n_new_lines > 0:
                     n_lines += n_new_lines
-                    
+
                     # -1 for the header line and another -1 for the second line, giving
                     # the values at simulation start time.
                     n_time_steps = n_lines - 2
@@ -86,6 +84,9 @@ class ProgressForwarder(_proc.RunAlongBase):
                         await queue.put(job_progress)
 
                         progress = new_progress
+
+                if self._shall_stop:
+                    break
 
                 sleep_seconds = 1.0
                 await _asyncio.sleep(sleep_seconds)
