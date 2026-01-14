@@ -1,14 +1,18 @@
 To get the RDP password for `runner` do the following.
 
-1. Get encrypted password:
+1. Set the `OS_PASSWORD`:
+    ```pwsh
+    PS C:\Users\damian.birchler\src\resultes\runner\create-disk-image> $env:OS_PASSWORD=read-host
+    ```
 
+1. Get encrypted password:
     ```pwsh
     PS C:\Users\damian.birchler\src\resultes\runner\create-disk-image> .\scripts\nova.ps1 get-password runner > password.enc
     ```
 
 1. Start WSL:
     ```bash
-    PS C:\Users\damian.birchler\src\resultes\runner> wsl
+    PS C:\Users\damian.birchler\src\resultes\runner\create-disk-image> wsl
     ```
 
 1. In WSL, decrypt:
