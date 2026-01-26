@@ -19,7 +19,6 @@ jobs:
 
     env:
       OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
-      BUILD_KEYPAIR_PRIVATE_KEY: ${{ secrets.BUILD_KEYPAIR_PRIVATE_KEY }}
 
     steps:
       - name: Generate app token
