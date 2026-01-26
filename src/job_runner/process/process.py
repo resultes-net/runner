@@ -110,6 +110,7 @@ class Process:
                     command_number=self._command_number, message=error_message_or_none
                 )
                 yield job_error
+                return
 
     @_ctx.asynccontextmanager
     async def _run_run_alongs(self) -> _cabc.AsyncIterator[None]:
