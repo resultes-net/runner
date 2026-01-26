@@ -16,7 +16,7 @@ class _ProcessDone:
     pass
 
 
-type Queue = _asyncio.Queue[_mrunner.JobSuccessfulPayload | _ProcessDone]
+type Queue = _asyncio.Queue[_mrunner.JobPayload | _ProcessDone]
 
 
 class RunAlongBase(_abc.ABC):
@@ -28,7 +28,7 @@ class RunAlongBase(_abc.ABC):
         raise NotImplementedError()
 
     @_abc.abstractmethod
-    async def check_error_and_possibly_raise(self) -> None:
+    async def get_error_message_or_none(self) -> str | None:
         raise NotImplementedError()
 
 
@@ -36,20 +36,22 @@ class Process:
     def __init__(
         self,
         job_id: str,
+        command_number: int,
         program: _pl.PureWindowsPath,
         args: _cabc.Sequence[str],
         working_dir_path: _pl.Path,
         run_alongs: _cabc.Sequence[RunAlongBase] | None = None,
     ) -> None:
         self._job_id = job_id
+        self._command_number = command_number
         self._program = program
         self._args = args
         self._working_dir_path = working_dir_path
         self._run_alongs = run_alongs if run_alongs else list[RunAlongBase]()
 
-        self._queue = _asyncio.Queue[_mrunner.JobSuccessfulPayload | _ProcessDone]()
+        self._queue = _asyncio.Queue[_mrunner.JobPayload | _ProcessDone]()
 
-    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         process = await _asyncio.create_subprocess_exec(
             self._program,
             *self._args,
@@ -92,12 +94,22 @@ class Process:
                 stderr,
             )
 
-            raise RuntimeError(
+            error_message = (
                 f"An error occurred running command {self._program}: {stderr}"
             )
+            job_error = _mrunner.JobError(
+                command_number=self._command_number, message=error_message
+            )
+            yield job_error
+            return
 
         for run_along in self._run_alongs:
-            await run_along.check_error_and_possibly_raise()
+            error_message_or_none = await run_along.get_error_message_or_none()
+            if error_message_or_none is not None:
+                job_error = _mrunner.JobError(
+                    command_number=self._command_number, message=error_message_or_none
+                )
+                yield job_error
 
     @_ctx.asynccontextmanager
     async def _run_run_alongs(self) -> _cabc.AsyncIterator[None]:
@@ -112,7 +124,7 @@ class Process:
         await process.wait()
         await self._queue.put(_ProcessDone())
 
-    def _flush_queue(self) -> _cabc.Iterator[_mrunner.JobSuccessfulPayload]:
+    def _flush_queue(self) -> _cabc.Iterator[_mrunner.JobPayload]:
         try:
             while payload := self._queue.get_nowait():
                 assert not isinstance(payload, _ProcessDone)

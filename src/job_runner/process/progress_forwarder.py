@@ -86,7 +86,6 @@ class ProgressForwarder(_proc.RunAlongBase):
 
                         await queue.put(job_progress)
 
-
                 if self._shall_stop:
                     break
 
@@ -98,8 +97,9 @@ class ProgressForwarder(_proc.RunAlongBase):
             )
 
     @_tp.override
-    async def check_error_and_possibly_raise(self) -> None:
+    async def get_error_message_or_none(self) -> str | None:
         if not await self._executor.run(self._time_step_prt_file_path.is_file):
-            raise RuntimeError(
-                f"{self._job_id} - Unexpectedly, Prt file {self._time_step_prt_file_path} has not been created."
-            )
+            error_message = f"{self._job_id} - Unexpectedly, Prt file {self._time_step_prt_file_path} has not been created."
+            return error_message
+
+        return None

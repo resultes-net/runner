@@ -70,7 +70,7 @@ class JobRunner:
     def job_id(self) -> str:
         return self._runner_job.id
 
-    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+    async def run(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         self._log_info("Job started.")
 
         job_dir_exists = await self._executor.run(self._job_dir_path.exists)
@@ -136,7 +136,7 @@ class JobRunner:
 
         await self._executor.run(_unzip, downloaded_file_path, self._working_dir_path)
 
-    async def _run_commands(self) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+    async def _run_commands(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         for command_number, command in enumerate(self._runner_job.commands):
             async for payload in self._run_command(command, command_number):
                 yield payload
@@ -145,7 +145,7 @@ class JobRunner:
         self,
         command: _mrunner.GeneralCommand | _mrunner.RunTrnsysCommand,
         command_number: int,
-    ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+    ) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         match command:
             case _mrunner.GeneralCommand():
                 iterable = self._run_general_command(command, command_number)
@@ -159,7 +159,7 @@ class JobRunner:
 
     async def _run_trnsys_command(
         self, trnsys_command: _mrunner.RunTrnsysCommand, command_number: int
-    ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+    ) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
 
         deck_file_path = self._working_dir_path / trnsys_command.relative_deck_file_path
 
@@ -188,6 +188,7 @@ class JobRunner:
         trnsys_process_working_dir_path = deck_file_path.parent
         process = _proc.Process(
             self.job_id,
+            command_number,
             trnsys_command.trnsys_exe_path,
             [deck_file_path.name, "/N"],
             trnsys_process_working_dir_path,
@@ -201,7 +202,7 @@ class JobRunner:
 
     async def _run_general_command(
         self, general_command: _mrunner.GeneralCommand, command_number: int
-    ) -> _cabc.AsyncIterable[_mrunner.JobSuccessfulPayload]:
+    ) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         working_dir_path = _pl.Path(
             general_command.program.parent
             if general_command.working_dir is None
@@ -230,6 +231,7 @@ class JobRunner:
 
         process = _proc.Process(
             self.job_id,
+            command_number,
             general_command.program,
             general_command.args,
             working_dir_path,

@@ -89,11 +89,10 @@ class LogForwarder(_proc.RunAlongBase):
             _LOGGER.info("...DONE reading from log file %s", self._log_file_path)
 
     @_tp.override
-    async def check_error_and_possibly_raise(self) -> None:
+    async def get_error_message_or_none(self) -> str | None:
         if not self._log_file_path_or_none:
-            return
+            return None
 
         if not await self._executor.run(self._log_file_path_or_none.is_file):
-            raise RuntimeError(
-                f"{self._job_id} - Unexpectedly, log file {self._log_file_path_or_none} has not been created."
-            )
+            error_message = f"{self._job_id} - Unexpectedly, log file {self._log_file_path_or_none} has not been created."
+            return error_message
