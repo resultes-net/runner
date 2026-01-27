@@ -86,18 +86,21 @@ class JobRunner:
 
         await self._download_input()
 
-        has_error_occurred = False
+        job_error = None
         async for payload in self._run_commands():
-            yield payload
-
             match payload:
                 case _mrunner.JobError():
-                    has_error_occurred = True
+                    job_error = payload
                     break
                 case _:
-                    pass
+                    yield payload
 
+        has_error_occurred = True if job_error else False
         await self._upload_results(has_error_occurred)
+
+        if job_error:
+            yield job_error
+            return
 
         return_paths = await self._get_return_paths()
 
