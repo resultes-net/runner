@@ -89,6 +89,12 @@ class JobRunner:
         async for payload in self._run_commands():
             yield payload
 
+            match payload:
+                case _mrunner.JobError():
+                    return
+                case _:
+                    pass
+
         await self._upload_results()
 
         return_paths = await self._get_return_paths()
