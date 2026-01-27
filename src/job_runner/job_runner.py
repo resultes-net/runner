@@ -86,16 +86,18 @@ class JobRunner:
 
         await self._download_input()
 
+        has_error_occurred = False
         async for payload in self._run_commands():
             yield payload
 
             match payload:
                 case _mrunner.JobError():
-                    return
+                    has_error_occurred = True
+                    break
                 case _:
                     pass
 
-        await self._upload_results()
+        await self._upload_results(has_error_occurred)
 
         return_paths = await self._get_return_paths()
 
@@ -260,9 +262,7 @@ class JobRunner:
 
         return log_forwarder
 
-    async def _upload_results(
-        self,
-    ):
+    async def _upload_results(self, has_error_occurred: bool):
         result_uploader = _ru.ResultUploader(
             self._working_dir_path,
             self._upload_dir_path,
@@ -271,7 +271,8 @@ class JobRunner:
         )
 
         for result in self._runner_job.results:
-            await result_uploader.upload(result)
+            if not has_error_occurred or result.on_error:
+                await result_uploader.upload(result)
 
     async def _get_return_paths(self) -> _cabc.Sequence[str] | None:
         return_paths = await self._executor.run(
