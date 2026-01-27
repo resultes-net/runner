@@ -124,7 +124,7 @@ class ResultUploader:
         formatted_remaining_paths = "\n".join(f"\t{p}" for p in remaining_paths)
         _LOGGER.debug("Remaining, final paths are:\n%s", formatted_remaining_paths)
 
-        return include_paths
+        return remaining_paths
 
     def _get_paths(
         self, glob_patterns: _cabc.Sequence[str]
