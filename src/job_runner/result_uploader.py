@@ -38,6 +38,13 @@ class ResultUploader:
     ) -> None:
         result_file_path = self._working_dir_path / result.file_path
 
+        if not result_file_path.is_file():
+            _LOGGER.warning(
+                "Was asked to upload file %s but it doesn't exist (or isn't a file).",
+                result_file_path,
+            )
+            return
+
         await self._swift.upload(
             result_file_path, result.object_storage_output_file_path
         )
