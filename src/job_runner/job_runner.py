@@ -203,7 +203,7 @@ class JobRunner:
             trnsys_command.trnsys_exe_path,
             [deck_file_path.name, "/N"],
             trnsys_process_working_dir_path,
-            run_alongs=[log_forwarder, progress_forwarder],
+            run_alongs=run_alongs,
         )
 
         self._log_info("Running TRNSYS in subprocess with deck file %s", deck_file_path)
