@@ -13,8 +13,8 @@ clouds:
       
       auth_url: https://api.pub1.infomaniak.cloud/identity
       
-      application_credential_id: "21ea9a2f3f4448ae9acb1019f4a35077"
-      application_credential_secret: "pTE5RcRz-DQSkyGErG0Y33ZqzUU3C4jMz4pSYqXGDHBwKloyQsZ_vt8M_1NCZnV1Bp-ycVPGo5cZNaVXQbnMHA"
+      application_credential_id: "ab57e7f94b954ae7bfd40d7db573e55e"
+      application_credential_secret: "uHjXCFdyqPUvleKJWpGX1_t1ieDvithf3MgbXDs_8h0g3yQ8tTTafMi0kRMdC8VyuQEfh6LItqyuPq9r0YbRSA"
     
       
         
