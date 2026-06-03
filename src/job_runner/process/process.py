@@ -67,8 +67,8 @@ class Process:
                 self._working_dir_path,
             )
 
-            coroutine = self._wait_for_process(process)
-            process_waiter = _asyncio.create_task(coroutine)
+            coroutine = self._wait_for_process_and_get_stderr_if_any(process)
+            stderr_task = _asyncio.create_task(coroutine)
 
             while payload := await self._queue.get():
                 match payload:
@@ -80,13 +80,9 @@ class Process:
         for payload in self._flush_queue():
             yield payload
 
-        return_code = await process.wait()
+        stderr = await stderr_task
 
-        if return_code != 0:
-            assert process.stderr
-            stderr_bytes = await process.stderr.read()
-            stderr = stderr_bytes.decode()
-
+        if stderr is not None:
             _LOGGER.error(
                 "%s - An error occurred running command %s: '%s'.",
                 self._job_id,
@@ -121,9 +117,14 @@ class Process:
 
             yield
 
-    async def _wait_for_process(self, process: _asp.Process) -> None:
-        await process.wait()
+    async def _wait_for_process_and_get_stderr_if_any(self, process: _asp.Process) -> str | None:
+        _, stderr_bytes = await process.communicate()
         await self._queue.put(_ProcessDone())
+
+        if process.returncode == 0:
+            return None
+
+        return stderr_bytes.decode()
 
     def _flush_queue(self) -> _cabc.Iterator[_mrunner.JobPayload]:
         try:

@@ -59,7 +59,7 @@ class JobRunner:
         loop = _asyncio.get_running_loop()
         self._executor = _ex.Executor(loop, self._config.executor)
 
-        self._downlad_dir_path = self._job_dir_path / "download"
+        self._download_dir_path = self._job_dir_path / "download"
         self._upload_dir_path = self._job_dir_path / "upload"
 
         self._working_dir_path = self._job_dir_path / "workdir"
@@ -119,7 +119,7 @@ class JobRunner:
 
     def _create_directories(self):
         self._job_dir_path.mkdir()
-        self._downlad_dir_path.mkdir()
+        self._download_dir_path.mkdir()
         self._working_dir_path.mkdir()
         self._upload_dir_path.mkdir()
 
@@ -139,7 +139,7 @@ class JobRunner:
         downloaded_file_name = self._runner_job.object_storage_input_path.path.split(
             "/"
         )[-1]
-        downloaded_file_path = self._downlad_dir_path / downloaded_file_name
+        downloaded_file_path = self._download_dir_path / downloaded_file_name
 
         await self._config.swift.download(
             self._runner_job.object_storage_input_path, downloaded_file_path
@@ -162,8 +162,8 @@ class JobRunner:
                 iterable = self._run_general_command(command, command_number)
             case _mrunner.RunTrnsysCommand():
                 iterable = self._run_trnsys_command(command, command_number)
-            case _:
-                _tp.assert_never(_)
+            case _ as unreachable:
+                _tp.assert_never(unreachable)
 
         async for payload in iterable:
             yield payload

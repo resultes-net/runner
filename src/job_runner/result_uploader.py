@@ -30,8 +30,8 @@ class ResultUploader:
                 await self._upload_single_file_result(result)
             case _mrunner.MultipleFilesResult():
                 await self._upload_multiple_files_result(result)
-            case _:
-                _tp.assert_never(_)
+            case _ as unreachable:
+                _tp.assert_never(unreachable)
 
     async def _upload_single_file_result(
         self, result: _mrunner.SingleFileResult
