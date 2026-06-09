@@ -7,6 +7,10 @@
 #
 -r dev-3rd-party.txt
 -e file:jsonrpc
+    # via -r requirements-3.13/dev.in
 -e file:openstack-utils
+    # via -r requirements-3.13/dev.in
 -e file:pydantic-models
+    # via -r requirements-3.13/dev.in
 jsonrpcclient==4.0.3
+    # via resultes-jsonrpc

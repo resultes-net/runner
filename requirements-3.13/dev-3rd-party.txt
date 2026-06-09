@@ -7,20 +7,64 @@
 #
 -r run-3rd-party.txt
 black==25.1.0
+    # via -r requirements-3.13/dev-3rd-party.in
 build==1.2.2.post1
+    # via pip-tools
 click==8.2.1
+    # via
+    #   black
+    #   pip-compile-multi
+    #   pip-tools
 colorama==0.4.6
+    # via
+    #   build
+    #   click
+    #   pytest
+coverage==7.14.1
+    # via pytest-cov
 iniconfig==2.1.0
+    # via pytest
 mypy==1.15.0
+    # via -r requirements-3.13/dev-3rd-party.in
 mypy-extensions==1.1.0
+    # via
+    #   black
+    #   mypy
 pathspec==0.12.1
-pip==25.1.1
-pip-compile-multi==3.0.0
-pip-tools==7.4.1
+    # via black
+pip==26.1.2
+    # via pip-tools
+pip-compile-multi==3.3.1
+    # via -r requirements-3.13/dev-3rd-party.in
+pip-tools==7.5.3
+    # via pip-compile-multi
 platformdirs==4.3.8
+    # via black
 pluggy==1.6.0
+    # via
+    #   pytest
+    #   pytest-cov
 pyproject-hooks==1.2.0
+    # via
+    #   build
+    #   pip-tools
 pytest==8.3.5
+    # via
+    #   -r requirements-3.13/dev-3rd-party.in
+    #   pytest-asyncio
+    #   pytest-cov
+    #   pytest-html
+    #   pytest-metadata
+    #   pytrnsys
 pytest-asyncio==1.0.0
+    # via -r requirements-3.13/dev-3rd-party.in
+pytest-cov==7.1.0
+    # via pytrnsys
+pytest-html==4.2.0
+    # via pytrnsys
+pytest-metadata==3.1.1
+    # via pytest-html
 toposort==1.10
+    # via pip-compile-multi
 wheel==0.45.1
+    # via pip-tools
