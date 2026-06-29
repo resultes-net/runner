@@ -71,47 +71,51 @@ class JobRunner:
         return self._runner_job.id
 
     async def run(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
-        self._log_info("Job started.")
+        timeout = self._runner_job.timeout
+        timeout_ms = timeout.total_seconds() if timeout else None
 
-        job_dir_exists = await self._executor.run(self._job_dir_path.exists)
+        async with _asyncio.timeout(timeout_ms):
+            self._log_info("Job started.")
 
-        if job_dir_exists:
-            raise RuntimeError(
-                "Have seen job ID before. Job IDs must be unique, forever.",
-            )
+            job_dir_exists = await self._executor.run(self._job_dir_path.exists)
 
-        await self._executor.run(self._create_directories)
+            if job_dir_exists:
+                raise RuntimeError(
+                    "Have seen job ID before. Job IDs must be unique, forever.",
+                )
 
-        await self._maybe_save_parameters()
+            await self._executor.run(self._create_directories)
 
-        await self._download_input()
+            await self._maybe_save_parameters()
 
-        job_error = None
-        async for payload in self._run_commands():
-            match payload:
-                case _mrunner.JobError():
-                    job_error = payload
-                    break
-                case _:
-                    yield payload
+            await self._download_input()
 
-        has_error_occurred = True if job_error else False
-        await self._upload_results(has_error_occurred)
+            job_error = None
+            async for payload in self._run_commands():
+                match payload:
+                    case _mrunner.JobError():
+                        job_error = payload
+                        break
+                    case _:
+                        yield payload
 
-        if job_error:
-            yield job_error
-            return
+            has_error_occurred = True if job_error else False
+            await self._upload_results(has_error_occurred)
 
-        return_paths = await self._get_return_paths()
+            if job_error:
+                yield job_error
+                return
 
-        if self._config.shall_remove_completed_jobs:
-            await self._executor.run(_su.rmtree, self._job_dir_path)
+            return_paths = await self._get_return_paths()
 
-        if return_paths is not None:
-            yield _mrunner.JobSuccess(result=return_paths)
-            return
+            if self._config.shall_remove_completed_jobs:
+                await self._executor.run(_su.rmtree, self._job_dir_path)
 
-        yield _mrunner.JobSuccess()
+            if return_paths is not None:
+                yield _mrunner.JobSuccess(result=list(return_paths))
+                return
+
+            yield _mrunner.JobSuccess()
 
     def _log_info(self, message: str, *args: _tp.Any, **kwargs: _tp.Any) -> None:
         augmented_message = f"%s - {message}"
