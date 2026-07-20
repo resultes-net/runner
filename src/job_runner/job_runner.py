@@ -71,6 +71,14 @@ class JobRunner:
         return self._runner_job.id
 
     async def run(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
+        try:
+            async for payload in self._run():
+                yield payload
+        finally:
+            if self._config.shall_remove_completed_jobs:
+                await self._executor.run(_su.rmtree, self._job_dir_path)
+    
+    async def _run(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         timeout = self._runner_job.timeout
         timeout_ms = timeout.total_seconds() if timeout else None
 
@@ -107,9 +115,6 @@ class JobRunner:
                 return
 
             return_paths = await self._get_return_paths()
-
-            if self._config.shall_remove_completed_jobs:
-                await self._executor.run(_su.rmtree, self._job_dir_path)
 
             if return_paths is not None:
                 yield _mrunner.JobSuccess(result=list(return_paths))
