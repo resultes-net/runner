@@ -34,13 +34,13 @@ class ProgressForwarder(_proc.RunAlongBase):
 
     @_tp.override
     @_ctx.asynccontextmanager
-    async def run_along(self, queue: _proc.Queue) -> _cabc.AsyncIterator[None]:
+    async def run_along(self, queue: _proc.Queue) -> _cabc.AsyncGenerator[None]:
         seconds_to_wait = 60.0
 
-        was_log_file_created = await _helpers.is_file_created_within(
+        was_prt_file_created = await _helpers.is_file_created_within(
             self._job_id, self._time_step_prt_file_path, seconds_to_wait, self._executor
         )
-        if not was_log_file_created:
+        if not was_prt_file_created:
             yield
             return
 

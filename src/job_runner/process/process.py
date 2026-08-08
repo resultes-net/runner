@@ -109,7 +109,7 @@ class Process:
                 return
 
     @_ctx.asynccontextmanager
-    async def _run_run_alongs(self) -> _cabc.AsyncIterator[None]:
+    async def _run_run_alongs(self) -> _cabc.AsyncGenerator[None]:
         async with _ctx.AsyncExitStack() as exit_stack:
             for run_along in self._run_alongs:
                 context = run_along.run_along(self._queue)
@@ -117,7 +117,9 @@ class Process:
 
             yield
 
-    async def _wait_for_process_and_get_stderr_if_any(self, process: _asp.Process) -> str | None:
+    async def _wait_for_process_and_get_stderr_if_any(
+        self, process: _asp.Process
+    ) -> str | None:
         _, stderr_bytes = await process.communicate()
         await self._queue.put(_ProcessDone())
 
