@@ -146,10 +146,10 @@ jobs:
 
       - name: Get OS auth secret
         run: |
-          mkdir -Force E:\runner\config\secrets
+          mkdir -Force .\config\secrets
           $env:PCU_PPGL7VO_OPENRC_PS1 | `
               Out-File -FilePath .\config\secrets\PCU-PPGL7VO-openrc.ps1 -NoNewline
-              
+
       - name: Upload image
         run: |
           .\scripts\os.ps1 image create --file image.vhdx --disk-format vhdx runner-disk-image
