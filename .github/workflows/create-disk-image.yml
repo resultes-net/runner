@@ -121,7 +121,7 @@ jobs:
       - name: Add OS auth secret
         run: |
           mkdir -Force E:\runner\config\secrets
-          "${{ secrets.SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML }}" | ` 
+          $env:SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML | ` 
               Out-File -FilePath E:\runner\config\secrets\swift-operator-application-credential.yaml -NoNewline
 
       - name: List contents of 'E:\runner'
