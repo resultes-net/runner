@@ -1,4 +1,3 @@
 venv/
-config/runner_keypair.pem
 contents/TRNSYS18/
 password.enc

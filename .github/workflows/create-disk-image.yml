@@ -118,10 +118,10 @@ jobs:
           cp -R ..\jsonrpc E:\runner
           cp -R ..\config E:\runner
 
-      - name: Add OS auth secret
+      - name: Add Swift auth secret
         run: |
           mkdir -Force E:\runner\config\secrets
-          $env:SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML | ` 
+          $env:SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML | `
               Out-File -FilePath E:\runner\config\secrets\swift-operator-application-credential.yaml -NoNewline
 
       - name: List contents of 'E:\runner'
@@ -144,6 +144,12 @@ jobs:
           .\venv\Scripts\python.exe -m pip install --upgrade wheel pip uv
           .\venv\Scripts\python.exe -m uv pip sync .\requirements\build.txt
 
+      - name: Get OS auth secret
+        run: |
+          mkdir -Force E:\runner\config\secrets
+          $env:PCU_PPGL7VO_OPENRC_PS1 | `
+              Out-File -FilePath .\config\secrets\PCU-PPGL7VO-openrc.ps1 -NoNewline
+              
       - name: Upload image
         run: |
           .\scripts\os.ps1 image create --file image.vhdx --disk-format vhdx runner-disk-image
