@@ -15,6 +15,9 @@ jobs:
     defaults:
       run:
         working-directory: create-disk-image
+    env:
+      SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML: ${{ secrets.SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML }}
+      PCU_PPGL7VO_OPENRC_PS1: ${{ secrets.PCU_PPGL7VO_OPENRC_PS1 }}
 
     steps:
       - name: Generate app token
