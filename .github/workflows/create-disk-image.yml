@@ -15,9 +15,6 @@ jobs:
     defaults:
       run:
         working-directory: create-disk-image
-    env:
-      SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML: ${{ secrets.SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML }}
-      PCU_PPGL7VO_OPENRC_PS1: ${{ secrets.PCU_PPGL7VO_OPENRC_PS1 }}
 
     steps:
       - name: Generate app token
@@ -122,6 +119,8 @@ jobs:
           cp -R ..\config E:\runner
 
       - name: Add Swift auth secret
+        env:
+          SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML: ${{ secrets.SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML }}
         run: |
           mkdir -Force E:\runner\config\secrets
           $env:SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML | `
@@ -148,6 +147,8 @@ jobs:
           .\venv\Scripts\python.exe -m uv pip sync .\requirements\build.txt
 
       - name: Get OS auth secret
+        env:
+          PCU_PPGL7VO_OPENRC_PS1: ${{ secrets.PCU_PPGL7VO_OPENRC_PS1 }}
         run: |
           mkdir -Force .\config\secrets
           $env:PCU_PPGL7VO_OPENRC_PS1 | `
