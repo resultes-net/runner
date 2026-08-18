@@ -36,7 +36,7 @@ DEFAULT_JOBS_DIR_PATH = _pl.Path(__file__).parents[1] / "jobs"
 JOBS_DIR_PATH = _pl.Path(_os.environ.get("JOBS_DIR_PATH", DEFAULT_JOBS_DIR_PATH))
 
 CLOUDS_YAML_FILE_PATH = _pl.Path(
-    _pl.Path(__file__).parents[1] / "config" / "clouds.yaml"
+    _pl.Path(__file__).parents[1] / "config" / "secrets" / "swift-operator-application-credential.yaml"
 )
 
 

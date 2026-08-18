@@ -9,16 +9,12 @@ on:
 jobs:
   build:
     concurrency: create-disk-image_serialized
-    
+
     runs-on: windows-2025
-    
+
     defaults:
       run:
         working-directory: create-disk-image
-
-
-    env:
-      OS_PASSWORD: ${{ secrets.OS_PASSWORD }}
 
     steps:
       - name: Generate app token
@@ -38,13 +34,13 @@ jobs:
         with:
           token: ${{ steps.app-token.outputs.token }}
           persist-credentials: false
-          submodules: 'true'
+          submodules: "true"
           lfs: true
 
       - name: Create disk image file
         run: |
           New-Vhd -Path image.vhdx -SizeBytes 2GB
-          
+
       - name: Mount disk image file
         run: |
           Mount-DiskImage -ImagePath $PWD\image.vhdx
@@ -59,7 +55,7 @@ jobs:
 
       - name: Create new partition
         run: |
-           New-Partition -DiskNumber 2 -UseMaximumSize
+          New-Partition -DiskNumber 2 -UseMaximumSize
 
       - name: Set drive letter
         run: |
@@ -72,7 +68,7 @@ jobs:
       - name: Copy start script
         run: |
           cp .\contents\start.ps1 E:\
-          
+
       - name: Extract TRNSYS
         run: |
           Expand-Archive -Path .\contents\TRNSYS18_resultes.zip
@@ -91,7 +87,7 @@ jobs:
 
       - name: Create runner folder
         run: |
-          mkdir E:\runner    
+          mkdir E:\runner
 
       - name: Enable long paths
         run: |
@@ -122,6 +118,12 @@ jobs:
           cp -R ..\jsonrpc E:\runner
           cp -R ..\config E:\runner
 
+      - name: Add OS auth secret
+        run: |
+          mkdir -Force E:\runner\config\secrets
+          "${{ secrets.SWIFT_OPERATOR_APPLICATION_CREDENTIAL_YAML }}" | ` 
+              Out-File -FilePath E:\runner\config\secrets\swift-operator-application-credential.yaml -NoNewline
+
       - name: List contents of 'E:\runner'
         run: |
           ls E:\runner\
@@ -138,10 +140,9 @@ jobs:
 
       - name: Create venv
         run: |
-            py -3.12 -m venv venv
-            .\venv\Scripts\python.exe -m pip install --upgrade wheel pip uv
-            .\venv\Scripts\python.exe -m uv pip sync .\requirements\build.txt
-
+          py -3.12 -m venv venv
+          .\venv\Scripts\python.exe -m pip install --upgrade wheel pip uv
+          .\venv\Scripts\python.exe -m uv pip sync .\requirements\build.txt
 
       - name: Upload image
         run: |
