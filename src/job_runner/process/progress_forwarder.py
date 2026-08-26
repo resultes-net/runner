@@ -93,7 +93,7 @@ class ProgressForwarder(_proc.RunAlongBase):
                 await _asyncio.sleep(sleep_seconds)
 
             _LOGGER.info(
-                "...DONE reading from log file %s", self._time_step_prt_file_path
+                "...DONE reading from prt file %s", self._time_step_prt_file_path
             )
 
     @_tp.override
