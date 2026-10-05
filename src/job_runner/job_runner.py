@@ -24,6 +24,10 @@ def _unzip(input_file_path: _pl.Path, output_dir_path: _pl.Path) -> None:
     _su.unpack_archive(input_file_path, output_dir_path)
 
 
+def _create_parent_dir(file_path: _pl.Path) -> None:
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+
+
 def _get_return_paths(
     output_dir_path: _pl.Path, results_glob_pattern: str | None
 ) -> _cabc.Sequence[str] | None:
@@ -96,7 +100,7 @@ class JobRunner:
 
             await self._maybe_save_parameters()
 
-            await self._download_input()
+            await self._download_inputs()
 
             job_error = None
             async for payload in self._run_commands():
@@ -142,19 +146,45 @@ class JobRunner:
 
         await self._executor.run(self._parameters_file_path.write_text, json)
 
-    async def _download_input(
-        self,
+    async def _download_inputs(self) -> None:
+        for input_number, job_input in enumerate(self._runner_job.inputs):
+            match job_input:
+                case _mrunner.SingleFileInput():
+                    await self._download_single_file_input(job_input)
+                case _mrunner.MultipleFilesInput():
+                    await self._download_multiple_files_input(job_input, input_number)
+                case _ as unreachable:
+                    _tp.assert_never(unreachable)
+
+    async def _download_single_file_input(
+        self, single_file_input: _mrunner.SingleFileInput
     ) -> None:
-        downloaded_file_name = self._runner_job.object_storage_input_path.path.split(
-            "/"
-        )[-1]
-        downloaded_file_path = self._download_dir_path / downloaded_file_name
+        file_path = self._working_dir_path / single_file_input.file_path
+
+        await self._executor.run(_create_parent_dir, file_path)
 
         await self._config.swift.download(
-            self._runner_job.object_storage_input_path, downloaded_file_path
+            single_file_input.object_storage_input_file_path, file_path
         )
 
-        await self._executor.run(_unzip, downloaded_file_path, self._working_dir_path)
+    async def _download_multiple_files_input(
+        self, multiple_files_input: _mrunner.MultipleFilesInput, input_number: int
+    ) -> None:
+        object_storage_input_file_path = (
+            multiple_files_input.object_storage_input_file_path
+        )
+
+        # Prefixed with the input number as several inputs may have the same file name.
+        file_name = object_storage_input_file_path.path.split("/")[-1]
+        downloaded_file_path = self._download_dir_path / f"{input_number}-{file_name}"
+
+        await self._config.swift.download(
+            object_storage_input_file_path, downloaded_file_path
+        )
+
+        output_dir_path = self._working_dir_path / multiple_files_input.dir_path
+
+        await self._executor.run(_unzip, downloaded_file_path, output_dir_path)
 
     async def _run_commands(self) -> _cabc.AsyncIterable[_mrunner.JobPayload]:
         for command_number, command in enumerate(self._runner_job.commands):
