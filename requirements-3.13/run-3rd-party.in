@@ -13,3 +13,5 @@ python-keystoneclient
 python-swiftclient
 
 sympy
+
+pvlib
